@@ -4,9 +4,8 @@
 #include "rs-graphics-core/colour-space.hpp"
 #include "rs-graphics-core/vector.hpp"
 #include "rs-format/enum.hpp"
-#include "rs-format/format.hpp" // TEST
+#include "rs-format/string.hpp"
 #include <algorithm>
-#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <iterator>
@@ -37,12 +36,12 @@ namespace RS::Graphics::Plane {
     class ImageIoError:
     public std::runtime_error {
     public:
-        ImageIoError(): std::runtime_error(get_message({})), file_() {}
-        explicit ImageIoError(const std::string& file): std::runtime_error(get_message(file)), file_(file) {}
-        const std::string& file() const noexcept { return file_; }
+        ImageIoError(const std::string& filename, const std::string& details, bool stbi):
+            std::runtime_error(make_message(filename, details, stbi)), filename_(filename) {}
+        const std::string& filename() const noexcept { return filename_; }
     private:
-        std::string file_;
-        static std::string get_message(const std::string& file);
+        std::string filename_;
+        static std::string make_message(const std::string& filename, const std::string& details, bool stbi);
     };
 
     struct ImageInfo {
@@ -70,19 +69,13 @@ namespace RS::Graphics::Plane {
         template <typename T>
         using StbiPtr = std::unique_ptr<T, StbiFree>;
 
-        StbiPtr<uint8_t> load_image_8_from_file(const std::string& filename, Point& shape);
-        StbiPtr<uint16_t> load_image_16_from_file(const std::string& filename, Point& shape);
-        StbiPtr<float> load_image_hdr_from_file(const std::string& filename, Point& shape);
-        StbiPtr<uint8_t> load_image_8_from_cstdio(FILE* file, Point& shape);
-        StbiPtr<uint16_t> load_image_16_from_cstdio(FILE* file, Point& shape);
-        StbiPtr<float> load_image_hdr_from_cstdio(FILE* file, Point& shape);
-        StbiPtr<uint8_t> load_image_8_from_memory(const void* ptr, size_t len, Point& shape);
-        StbiPtr<uint16_t> load_image_16_from_memory(const void* ptr, size_t len, Point& shape);
-        StbiPtr<float> load_image_hdr_from_memory(const void* ptr, size_t len, Point& shape);
+        StbiPtr<uint8_t> load_image_8(const std::string& filename, Point& shape);
+        StbiPtr<uint16_t> load_image_16(const std::string& filename, Point& shape);
+        StbiPtr<float> load_image_hdr(const std::string& filename, Point& shape);
 
-        // bool save_quantised_image(const std::string& filename, const std::string& format,
-        //     const uint8_t* ptr, Point shape, int channels, int quality);
-        // bool save_hdr_image(const std::string& filename, const float* ptr, Point shape, int channels);
+        std::string get_file_format(const std::string& filename);
+        void save_image_8(const Image<Core::Rgba8>& image, const std::string& filename, const std::string& format, int quality);
+        void save_image_hdr(const Image<Core::Rgbaf>& image, const std::string& filename);
 
     }
 
@@ -191,12 +184,8 @@ namespace RS::Graphics::Plane {
         void clear() noexcept { pixels_.reset(); shape_ = {}; }
         void fill(colour_type c) noexcept { std::fill(pixels_.begin(), pixels_.end(), c); }
 
-        void load_cstdio(FILE* file);
-        void load_file(const std::string& filename);
-        void load_memory(const void* ptr, size_t len);
-        void save_cstdio(FILE* file) const;
-        void save_file(const std::string& filename) const;
-        void save_memory(void* ptr, size_t len) const;
+        void load(const std::string& filename);
+        void save(const std::string& filename, int quality = 90) const;
 
         iterator locate(Point p) noexcept { return locate(p.x(), p.y()); }
         const_iterator locate(Point p) const noexcept { return locate(p.x(), p.y()); }
@@ -319,21 +308,21 @@ namespace RS::Graphics::Plane {
     }
 
     template <typename T, typename CS, Core::ColourLayout CL, int Flags>
-    void Image<Core::Colour<T, CS, CL>, Flags>::load_cstdio(FILE* file) {
+    void Image<Core::Colour<T, CS, CL>, Flags>::load(const std::string& filename) {
         using namespace Detail;
         Point shape;
         if constexpr (std::is_same_v<channel_type, uint8_t>) {
-            auto image_ptr = load_image_8_from_cstdio(file, shape);
+            auto image_ptr = load_image_8(filename, shape);
             Image<Core::Rgba8> image(shape);
             std::memcpy(image.data(), image_ptr.get(), image.size() * sizeof(colour_type));
             convert_image(image, *this);
         } else if constexpr (std::is_same_v<channel_type, uint16_t>) {
-            auto image_ptr = load_image_16_from_cstdio(file, shape);
+            auto image_ptr = load_image_16(filename, shape);
             Image<Core::Rgba16> image(shape);
             std::memcpy(image.data(), image_ptr.get(), image.size() * sizeof(colour_type));
             convert_image(image, *this);
         } else {
-            auto image_ptr = load_image_hdr_from_cstdio(file, shape);
+            auto image_ptr = load_image_hdr(filename, shape);
             Image<Core::Rgbaf> image(shape);
             std::memcpy(image.data(), image_ptr.get(), image.size() * sizeof(colour_type));
             convert_image(image, *this);
@@ -341,66 +330,17 @@ namespace RS::Graphics::Plane {
     }
 
     template <typename T, typename CS, Core::ColourLayout CL, int Flags>
-    void Image<Core::Colour<T, CS, CL>, Flags>::load_file(const std::string& filename) {
-        using namespace Detail;
-        Point shape;
-        if constexpr (std::is_same_v<channel_type, uint8_t>) {
-            auto image_ptr = load_image_8_from_file(filename, shape);
-            Image<Core::Rgba8> image(shape);
-            std::memcpy(image.data(), image_ptr.get(), image.size() * sizeof(colour_type));
-            convert_image(image, *this);
-        } else if constexpr (std::is_same_v<channel_type, uint16_t>) {
-            auto image_ptr = load_image_16_from_file(filename, shape);
-            Image<Core::Rgba16> image(shape);
-            std::memcpy(image.data(), image_ptr.get(), image.size() * sizeof(colour_type));
-            convert_image(image, *this);
+    void Image<Core::Colour<T, CS, CL>, Flags>::save(const std::string& filename, int quality) const {
+        auto format = Detail::get_file_format(filename);
+        if (format == "hdr") {
+            Image<Core::Rgbaf> image;
+            convert_image(*this, image);
+            Detail::save_image_hdr(image, filename);
         } else {
-            auto image_ptr = load_image_hdr_from_file(filename, shape);
-            Image<Core::Rgbaf> image(shape);
-            std::memcpy(image.data(), image_ptr.get(), image.size() * sizeof(colour_type));
-            convert_image(image, *this);
+            Image<Core::Rgba8> image;
+            convert_image(*this, image);
+            Detail::save_image_8(image, filename, format, quality);
         }
-    }
-
-    template <typename T, typename CS, Core::ColourLayout CL, int Flags>
-    void Image<Core::Colour<T, CS, CL>, Flags>::load_memory(const void* ptr, size_t len) {
-        using namespace Detail;
-        Point shape;
-        if constexpr (std::is_same_v<channel_type, uint8_t>) {
-            auto image_ptr = load_image_8_from_memory(ptr, len, shape);
-            Image<Core::Rgba8> image(shape);
-            std::memcpy(image.data(), image_ptr.get(), image.size() * sizeof(colour_type));
-            convert_image(image, *this);
-        } else if constexpr (std::is_same_v<channel_type, uint16_t>) {
-            auto image_ptr = load_image_16_from_memory(ptr, len, shape);
-            Image<Core::Rgba16> image(shape);
-            std::memcpy(image.data(), image_ptr.get(), image.size() * sizeof(colour_type));
-            convert_image(image, *this);
-        } else {
-            auto image_ptr = load_image_hdr_from_memory(ptr, len, shape);
-            Image<Core::Rgbaf> image(shape);
-            std::memcpy(image.data(), image_ptr.get(), image.size() * sizeof(colour_type));
-            convert_image(image, *this);
-        }
-    }
-
-    template <typename T, typename CS, Core::ColourLayout CL, int Flags>
-    void Image<Core::Colour<T, CS, CL>, Flags>::save_cstdio(FILE* file) const {
-        // TODO
-        (void)file;
-    }
-
-    template <typename T, typename CS, Core::ColourLayout CL, int Flags>
-    void Image<Core::Colour<T, CS, CL>, Flags>::save_file(const std::string& filename) const {
-        // TODO
-        (void)filename;
-    }
-
-    template <typename T, typename CS, Core::ColourLayout CL, int Flags>
-    void Image<Core::Colour<T, CS, CL>, Flags>::save_memory(void* ptr, size_t len) const {
-        // TODO
-        (void)ptr;
-        (void)len;
     }
 
 }

@@ -18,6 +18,7 @@ int main(int argc, char** argv) {
     // image-io-test.cpp
     UNIT_TEST(rs_graphics_2d_image_io_file_info)
     UNIT_TEST(rs_graphics_2d_image_io_load)
+    UNIT_TEST(rs_graphics_2d_image_io_save)
 
     // unit-test.cpp
 

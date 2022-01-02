@@ -34,20 +34,25 @@
     #pragma GCC diagnostic pop
 #endif
 
+using namespace RS::Format;
 using namespace RS::Format::Literals;
 
 namespace RS::Graphics::Plane {
 
-    std::string ImageIoError::get_message(const std::string& file) {
-        std::string msg = "Image I/O error";
-        if (! file.empty())
-            msg += ": " + file;
-        auto reason = stbi_failure_reason();
-        if (reason != nullptr && *reason != 0) {
-            msg += ": ";
-            msg += reason;
+    std::string ImageIoError::make_message(const std::string& filename, const std::string& details, bool stbi) {
+        std::string message = "Image I/O error";
+        if (! filename.empty())
+            message += ": " + filename;
+        if (! details.empty())
+            message += ": " + details;
+        if (stbi) {
+            auto reason = stbi_failure_reason();
+            if (reason != nullptr && *reason != 0) {
+                message += ": ";
+                message += reason;
+            }
         }
-        return msg;
+        return message;
     }
 
     std::string ImageInfo::str() const {
@@ -90,54 +95,67 @@ namespace RS::Graphics::Plane {
                 image_ptr = stb_function(src_ptr, &shape.x(), &shape.y(), &channels_in_file, 4);
             if (image_ptr == nullptr) {
                 if constexpr (std::is_same_v<Source, const char>)
-                    throw ImageIoError(src_ptr);
+                    throw ImageIoError(src_ptr, {}, true);
                 else
-                    throw ImageIoError();
+                    throw ImageIoError({}, {}, true);
             }
             return StbiPtr<Channel>(static_cast<Channel*>(image_ptr));
         }
 
-        StbiPtr<uint8_t> load_image_8_from_file(const std::string& filename, Point& shape) {
+        StbiPtr<uint8_t> load_image_8(const std::string& filename, Point& shape) {
             return load_image<uint8_t>(&stbi_load, filename.data(), 0, shape);
         }
 
-        StbiPtr<uint16_t> load_image_16_from_file(const std::string& filename, Point& shape) {
+        StbiPtr<uint16_t> load_image_16(const std::string& filename, Point& shape) {
             return load_image<uint16_t>(&stbi_load_16, filename.data(), 0, shape);
         }
 
-        StbiPtr<float> load_image_hdr_from_file(const std::string& filename, Point& shape) {
+        StbiPtr<float> load_image_hdr(const std::string& filename, Point& shape) {
             return load_image<float>(&stbi_loadf, filename.data(), 0, shape);
         }
 
-        StbiPtr<uint8_t> load_image_8_from_cstdio(FILE* file, Point& shape) {
-            return load_image<uint8_t>(&stbi_load_from_file, file, 0, shape);
+        std::string get_file_format(const std::string& filename) {
+            size_t slash;
+            #ifdef _WIN32
+                slash = filename.find_last_of("/\\");
+            #else
+                slash = filename.find_last_of('/');
+            #endif
+            if (slash == npos)
+                slash = 0;
+            else
+                ++slash;
+            size_t dot = filename.find_last_of('.');
+            if (dot <= slash || dot == npos)
+                throw ImageIoError(filename, "Unknown file format", false);
+            auto format = ascii_lowercase(filename.substr(dot + 1));
+            if (format != "bmp" && format != "hdr" && format != "jpg" && format != "jpeg" && format != "png" && format != "tga")
+                throw ImageIoError(filename, "Unknown file format", false);
+            return format;
         }
 
-        StbiPtr<uint16_t> load_image_16_from_cstdio(FILE* file, Point& shape) {
-            return load_image<uint16_t>(&stbi_load_from_file_16, file, 0, shape);
+        void save_image_8(const Image<Core::Rgba8>& image, const std::string& filename, const std::string& format, int quality) {
+            quality = std::clamp(quality, 1, 100);
+            int rc = 0;
+            if (format == "bmp")
+                rc = stbi_write_bmp(filename.data(), image.width(), image.height(), 4, image.data());
+            else if (format == "jpg" || format == "jpeg")
+                rc = stbi_write_jpg(filename.data(), image.width(), image.height(), 4, image.data(), quality);
+            else if (format == "png")
+                rc = stbi_write_png(filename.data(), image.width(), image.height(), 4, image.data(), 0);
+            else if (format == "tga")
+                rc = stbi_write_tga(filename.data(), image.width(), image.height(), 4, image.data());
+            else
+                throw ImageIoError(filename, "Unknown file format", false);
+            if (rc == 0)
+                throw ImageIoError(filename, {}, false);
         }
 
-        StbiPtr<float> load_image_hdr_from_cstdio(FILE* file, Point& shape) {
-            return load_image<float>(&stbi_loadf_from_file, file, 0, shape);
+        void save_image_hdr(const Image<Core::Rgbaf>& image, const std::string& filename) {
+            int rc = stbi_write_hdr(filename.data(), image.width(), image.height(), 4, image.data());
+            if (rc == 0)
+                throw ImageIoError(filename, {}, false);
         }
-
-        StbiPtr<uint8_t> load_image_8_from_memory(const void* ptr, size_t len, Point& shape) {
-            return load_image<uint8_t>(&stbi_load_from_memory, static_cast<const stbi_uc*>(ptr), len, shape);
-        }
-
-        StbiPtr<uint16_t> load_image_16_from_memory(const void* ptr, size_t len, Point& shape) {
-            return load_image<uint16_t>(&stbi_load_16_from_memory, static_cast<const stbi_uc*>(ptr), len, shape);
-        }
-
-        StbiPtr<float> load_image_hdr_from_memory(const void* ptr, size_t len, Point& shape) {
-            return load_image<float>(&stbi_loadf_from_memory, static_cast<const stbi_uc*>(ptr), len, shape);
-        }
-
-        // Image output
-
-        // bool save_quantised_image(const std::string& filename, const std::string& format,
-        //     const uint8_t* ptr, Point shape, int channels, int quality);
-        // bool save_hdr_image(const std::string& filename, const float* ptr, Point shape, int channels);
 
     }
 
