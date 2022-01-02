@@ -14,6 +14,8 @@
 
 namespace RS::Graphics::Plane {
 
+    using Point = Core::Int2;
+
     RS_DEFINE_ENUM_CLASS(ImageLayout, int, 0,
         top_down,
         bottom_up
@@ -101,7 +103,6 @@ namespace RS::Graphics::Plane {
         using channel_type = T;
         using colour_space = CS;
         using colour_type = Core::Colour<T, CS, CL>;
-        using point_type = Core::Vector<int, 2>;
         using iterator = basic_iterator<Image, colour_type>;
         using const_iterator = basic_iterator<const Image, const colour_type>;
 
@@ -117,13 +118,13 @@ namespace RS::Graphics::Plane {
         static_assert(can_premultiply || ! is_premultiplied);
 
         Image() noexcept: pixels_(), shape_(0, 0) {}
-        explicit Image(point_type shape) { reset(shape); }
-        Image(point_type shape, colour_type c) { reset(shape, c); }
+        explicit Image(Point shape) { reset(shape); }
+        Image(Point shape, colour_type c) { reset(shape, c); }
         Image(int w, int h) { reset(w, h); }
         Image(int w, int h, colour_type c) { reset(w, h, c); }
 
-        colour_type& operator[](point_type p) noexcept { return (*this)(p.x(), p.y()); }
-        const colour_type& operator[](point_type p) const noexcept { return (*this)(p.x(), p.y()); }
+        colour_type& operator[](Point p) noexcept { return (*this)(p.x(), p.y()); }
+        const colour_type& operator[](Point p) const noexcept { return (*this)(p.x(), p.y()); }
         colour_type& operator()(int x, int y) noexcept { return *locate(x, y); }
         const colour_type& operator()(int x, int y) const noexcept { return *locate(x, y); }
 
@@ -146,8 +147,8 @@ namespace RS::Graphics::Plane {
         void clear() noexcept { pixels_.reset(); shape_ = {}; }
         void fill(colour_type c) noexcept { std::fill(pixels_.begin(), pixels_.end(), c); }
 
-        iterator locate(point_type p) noexcept { return locate(p.x(), p.y()); }
-        const_iterator locate(point_type p) const noexcept { return locate(p.x(), p.y()); }
+        iterator locate(Point p) noexcept { return locate(p.x(), p.y()); }
+        const_iterator locate(Point p) const noexcept { return locate(p.x(), p.y()); }
         iterator locate(int x, int y) noexcept { return iterator(*this, make_index(x, y)); }
         const_iterator locate(int x, int y) const noexcept { return const_iterator(*this, make_index(x, y)); }
 
@@ -171,8 +172,8 @@ namespace RS::Graphics::Plane {
             return result;
         }
 
-        void reset(point_type shape) { reset(shape.x(), shape.y()); }
-        void reset(point_type shape, colour_type c) { reset(shape.x(), shape.y(), c); }
+        void reset(Point shape) { reset(shape.x(), shape.y()); }
+        void reset(Point shape, colour_type c) { reset(shape.x(), shape.y(), c); }
 
         void reset(int w, int h) {
             size_t n = size_t(w) * size_t(h);
@@ -187,7 +188,7 @@ namespace RS::Graphics::Plane {
             shape_ = {w, h};
         }
 
-        point_type shape() const noexcept { return shape_; }
+        Point shape() const noexcept { return shape_; }
         bool empty() const noexcept { return pixels_.empty(); }
         int width() const noexcept { return shape_.x(); }
         int height() const noexcept { return shape_.y(); }
@@ -202,7 +203,7 @@ namespace RS::Graphics::Plane {
     private:
 
         std::vector<colour_type> pixels_;
-        point_type shape_;
+        Point shape_;
 
         int64_t make_index(int x, int y) const noexcept { return int64_t(width()) * y + x; }
 
