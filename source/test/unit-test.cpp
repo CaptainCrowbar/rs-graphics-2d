@@ -14,6 +14,7 @@ int main(int argc, char** argv) {
     UNIT_TEST(rs_graphics_2d_image_pixel_access)
     UNIT_TEST(rs_graphics_2d_image_premultiplied_alpha)
     UNIT_TEST(rs_graphics_2d_image_conversion)
+    UNIT_TEST(rs_graphics_2d_image_file_info)
 
     // unit-test.cpp
 

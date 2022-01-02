@@ -6,6 +6,7 @@
 #include "rs-format/enum.hpp"
 #include <algorithm>
 #include <iterator>
+#include <ostream>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
@@ -31,13 +32,26 @@ namespace RS::Graphics::Plane {
     class ImageIoError:
     public std::runtime_error {
     public:
-        explicit ImageIoError(const std::string& file):
-            std::runtime_error(get_message(file)), file_(file) {}
-        std::string file() const { return file_; }
+        ImageIoError(): std::runtime_error(get_message({})), file_() {}
+        explicit ImageIoError(const std::string& file): std::runtime_error(get_message(file)), file_(file) {}
+        const std::string& file() const noexcept { return file_; }
     private:
         std::string file_;
         static std::string get_message(const std::string& file);
     };
+
+    struct ImageInfo {
+        Point shape = Point::null();
+        int channels = 0;
+        int bits_per_channel = 0;
+        bool has_alpha = false;
+        bool is_hdr = false;
+        explicit operator bool() const noexcept { return shape != Point::null(); }
+        std::string str() const;
+    };
+
+    ImageInfo query_image(const std::string& filename);
+    inline std::ostream& operator<<(std::ostream& out, const ImageInfo& info) { return out << info.str(); }
 
     template <typename Colour, int Flags = 0>
     class Image;
