@@ -16,11 +16,18 @@ namespace RS::Graphics::Plane {
         bottom_up
     )
 
-    template <typename Colour, ImageLayout Layout = ImageLayout::top_down>
+    namespace ImageFlags {
+
+        constexpr int bottom_up      = 1;  // Image is laid out bottom-up internally
+        constexpr int premultiplied  = 2;  // Image uses premultiplied alpha
+
+    };
+
+    template <typename Colour, int Flags = 0>
     class Image;
 
-    template <typename T, typename CS, Core::ColourLayout CL, ImageLayout Layout>
-    class Image<Core::Colour<T, CS, CL>, Layout> {
+    template <typename T, typename CS, Core::ColourLayout CL, int Flags>
+    class Image<Core::Colour<T, CS, CL>, Flags> {
 
     private:
 
@@ -84,11 +91,16 @@ namespace RS::Graphics::Plane {
         using iterator = basic_iterator<Image, colour_type>;
         using const_iterator = basic_iterator<const Image, const colour_type>;
 
+        static constexpr bool can_premultiply = colour_type::can_premultiply;
         static constexpr int channels = colour_type::channels;
         static constexpr Core::ColourLayout colour_layout = CL;
         static constexpr bool has_alpha = colour_type::has_alpha;
-        static constexpr ImageLayout image_layout = Layout;
+        static constexpr bool is_bottom_up = (Flags & ImageFlags::bottom_up) != 0;
+        static constexpr bool is_top_down = ! is_bottom_up;
+        static constexpr bool is_premultiplied = (Flags & ImageFlags::premultiplied) != 0;
         static constexpr bool is_hdr = colour_type::is_hdr;
+
+        static_assert(can_premultiply || ! is_premultiplied);
 
         Image() noexcept: pixels_(), shape_(0, 0) {}
         explicit Image(point_type shape) { reset(shape); }
@@ -108,14 +120,14 @@ namespace RS::Graphics::Plane {
         T* data() noexcept { return reinterpret_cast<T*>(pixels_.data()); }
         const T* data() const noexcept { return reinterpret_cast<const T*>(pixels_.data()); }
 
-        iterator bottom_left() noexcept { return locate(0, Layout == ImageLayout::top_down ? height() - 1 : 0); }
-        const_iterator bottom_left() const noexcept { return locate(0, Layout == ImageLayout::top_down ? height() - 1 : 0); }
-        iterator bottom_right() noexcept { return locate(width() - 1, Layout == ImageLayout::top_down ? height() - 1 : 0); }
-        const_iterator bottom_right() const noexcept { return locate(width() - 1, Layout == ImageLayout::top_down ? height() - 1 : 0); }
-        iterator top_left() noexcept { return locate(0, Layout == ImageLayout::top_down ? 0 : height() - 1); }
-        const_iterator top_left() const noexcept { return locate(0, Layout == ImageLayout::top_down ? 0 : height() - 1); }
-        iterator top_right() noexcept { return locate(width() - 1, Layout == ImageLayout::top_down ? 0 : height() - 1); }
-        const_iterator top_right() const noexcept { return locate(width() - 1, Layout == ImageLayout::top_down ? 0 : height() - 1); }
+        iterator bottom_left() noexcept { return locate(0, is_top_down ? height() - 1 : 0); }
+        const_iterator bottom_left() const noexcept { return locate(0, is_top_down ? height() - 1 : 0); }
+        iterator bottom_right() noexcept { return locate(width() - 1, is_top_down ? height() - 1 : 0); }
+        const_iterator bottom_right() const noexcept { return locate(width() - 1, is_top_down ? height() - 1 : 0); }
+        iterator top_left() noexcept { return locate(0, is_top_down ? 0 : height() - 1); }
+        const_iterator top_left() const noexcept { return locate(0, is_top_down ? 0 : height() - 1); }
+        iterator top_right() noexcept { return locate(width() - 1, is_top_down ? 0 : height() - 1); }
+        const_iterator top_right() const noexcept { return locate(width() - 1, is_top_down ? 0 : height() - 1); }
 
         void clear() noexcept { pixels_.reset(); shape_ = {}; }
         void fill(colour_type c) noexcept { std::fill(pixels_.begin(), pixels_.end(), c); }
@@ -125,10 +137,41 @@ namespace RS::Graphics::Plane {
         iterator locate(int x, int y) noexcept { return iterator(*this, make_index(x, y)); }
         const_iterator locate(int x, int y) const noexcept { return const_iterator(*this, make_index(x, y)); }
 
+        template <typename U = T>
+        Image<colour_type, Flags | ImageFlags::premultiplied>
+        premultiply(std::enable_if<Core::Detail::SfinaeBoolean<U, can_premultiply && ! is_premultiplied>::value>* = nullptr) const {
+            Image<colour_type, Flags | ImageFlags::premultiplied> result(shape());
+            auto out = result.begin();
+            for (auto& pixel: *this)
+                *out++ = pixel.multiply_alpha();
+            return result;
+        }
+
+        template <typename U = T>
+        Image<colour_type, Flags - ImageFlags::premultiplied>
+        unmultiply(std::enable_if<Core::Detail::SfinaeBoolean<U, can_premultiply && is_premultiplied>::value>* = nullptr) const {
+            Image<colour_type, Flags - ImageFlags::premultiplied> result(shape());
+            auto out = result.begin();
+            for (auto& pixel: *this)
+                *out++ = pixel.unmultiply_alpha();
+            return result;
+        }
+
         void reset(point_type shape) { reset(shape.x(), shape.y()); }
         void reset(point_type shape, colour_type c) { reset(shape.x(), shape.y(), c); }
-        void reset(int w, int h);
-        void reset(int w, int h, colour_type c);
+
+        void reset(int w, int h) {
+            size_t n = size_t(w) * size_t(h);
+            pixels_.resize(n);
+            shape_ = {w, h};
+        }
+
+        void reset(int w, int h, colour_type c) {
+            size_t n = size_t(w) * size_t(h);
+            pixels_.clear();
+            pixels_.resize(n, c);
+            shape_ = {w, h};
+        }
 
         point_type shape() const noexcept { return shape_; }
         bool empty() const noexcept { return pixels_.empty(); }
@@ -151,26 +194,14 @@ namespace RS::Graphics::Plane {
 
     };
 
-        template <typename T, typename CS, Core::ColourLayout CL, ImageLayout Layout>
-        void Image<Core::Colour<T, CS, CL>, Layout>::reset(int w, int h) {
-            size_t n = size_t(w) * size_t(h);
-            pixels_.resize(n);
-            shape_ = {w, h};
-        }
-
-        template <typename T, typename CS, Core::ColourLayout CL, ImageLayout Layout>
-        void Image<Core::Colour<T, CS, CL>, Layout>::reset(int w, int h, colour_type c) {
-            size_t n = size_t(w) * size_t(h);
-            pixels_.clear();
-            pixels_.resize(n, c);
-            shape_ = {w, h};
-        }
-
     using Image8 = Image<Core::Rgba8>;
     using Image16 = Image<Core::Rgba16>;
     using HdrImage = Image<Core::Rgbaf>;
     using sImage8 = Image<Core::sRgba8>;
     using sImage16 = Image<Core::sRgba16>;
     using sHdrImage = Image<Core::sRgbaf>;
+    using PmaImage8 = Image<Core::Rgba8, ImageFlags::premultiplied>;
+    using PmaImage16 = Image<Core::Rgba16, ImageFlags::premultiplied>;
+    using PmaHdrImage = Image<Core::Rgbaf, ImageFlags::premultiplied>;
 
 }
