@@ -1,6 +1,5 @@
 #include "rs-graphics-2d/image.hpp"
 #include "rs-format/format.hpp"
-#include <cstdio>
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_STATIC
@@ -39,8 +38,6 @@ using namespace RS::Format::Literals;
 
 namespace RS::Graphics::Plane {
 
-    // Exceptions
-
     std::string ImageIoError::get_message(const std::string& file) {
         std::string msg = "Image I/O error";
         if (! file.empty())
@@ -52,8 +49,6 @@ namespace RS::Graphics::Plane {
         }
         return msg;
     }
-
-    // Image information
 
     std::string ImageInfo::str() const {
         if (! *this)
@@ -82,40 +77,68 @@ namespace RS::Graphics::Plane {
         return info;
     }
 
-    // Image input
+    namespace Detail {
 
-    // TODO
+        template <typename Channel, typename Function, typename Source>
+        StbiPtr<Channel> load_image(Function* stb_function, Source* src, size_t len, Point& shape) {
+            auto src_ptr = static_cast<Source*>(src);
+            int channels_in_file = 0;
+            void* image_ptr;
+            if constexpr (std::is_same_v<Source, const stbi_uc>)
+                image_ptr = stb_function(src_ptr, int(len), &shape.x(), &shape.y(), &channels_in_file, 4);
+            else
+                image_ptr = stb_function(src_ptr, &shape.x(), &shape.y(), &channels_in_file, 4);
+            if (image_ptr == nullptr) {
+                if constexpr (std::is_same_v<Source, const char>)
+                    throw ImageIoError(src_ptr);
+                else
+                    throw ImageIoError();
+            }
+            return StbiPtr<Channel>(static_cast<Channel*>(image_ptr));
+        }
 
-    // Basic usage (see HDR discussion below for HDR usage):
-    //    int x,y,n;
-    //    unsigned char *data = stbi_load(filename, &x, &y, &n, 0);
-    //    // ... process data if not NULL ...
-    //    // ... x = width, y = height, n = # 8-bit components per pixel ...
-    //    // ... replace '0' with '1'..'4' to force that many components per pixel
-    //    // ... but 'n' will always be the number that it would have been if you said 0
-    //    stbi_image_free(data)
+        StbiPtr<uint8_t> load_image_8_from_file(const std::string& filename, Point& shape) {
+            return load_image<uint8_t>(&stbi_load, filename.data(), 0, shape);
+        }
 
-    //    float *data = stbi_loadf(filename, &x, &y, &n, 0);
+        StbiPtr<uint16_t> load_image_16_from_file(const std::string& filename, Point& shape) {
+            return load_image<uint16_t>(&stbi_load_16, filename.data(), 0, shape);
+        }
 
-    // If image loading fails for any reason, the return value will be NULL,
-    // and *x, *y, *channels_in_file will be unchanged. The function
-    // stbi_failure_reason() can be queried for an extremely brief, end-user
-    // unfriendly explanation of why the load failed. Define STBI_NO_FAILURE_STRINGS
-    // to avoid compiling these strings at all, and STBI_FAILURE_USERMSG to get slightly
-    // more user-friendly ones.
+        StbiPtr<float> load_image_hdr_from_file(const std::string& filename, Point& shape) {
+            return load_image<float>(&stbi_loadf, filename.data(), 0, shape);
+        }
 
-    // STBIDEF int stbi_convert_wchar_to_utf8(char *buffer, size_t bufferlen, const wchar_t* input);
+        StbiPtr<uint8_t> load_image_8_from_cstdio(FILE* file, Point& shape) {
+            return load_image<uint8_t>(&stbi_load_from_file, file, 0, shape);
+        }
 
-    // STBIDEF stbi_uc *stbi_load_from_memory (stbi_uc const *buffer, int len , int *x, int *y, int *channels_in_file, int desired_channels);
-    // STBIDEF stbi_uc *stbi_load (char const *filename, int *x, int *y, int *channels_in_file, int desired_channels);
-    // STBIDEF stbi_uc *stbi_load_from_file (FILE *f, int *x, int *y, int *channels_in_file, int desired_channels);
+        StbiPtr<uint16_t> load_image_16_from_cstdio(FILE* file, Point& shape) {
+            return load_image<uint16_t>(&stbi_load_from_file_16, file, 0, shape);
+        }
 
-    // STBIDEF stbi_us *stbi_load_16_from_memory (stbi_uc const *buffer, int len, int *x, int *y, int *channels_in_file, int desired_channels);
-    // STBIDEF stbi_us *stbi_load_16 (char const *filename, int *x, int *y, int *channels_in_file, int desired_channels);
-    // STBIDEF stbi_us *stbi_load_from_file_16(FILE *f, int *x, int *y, int *channels_in_file, int desired_channels);
+        StbiPtr<float> load_image_hdr_from_cstdio(FILE* file, Point& shape) {
+            return load_image<float>(&stbi_loadf_from_file, file, 0, shape);
+        }
 
-    // STBIDEF float *stbi_loadf_from_memory (stbi_uc const *buffer, int len, int *x, int *y, int *channels_in_file, int desired_channels);
-    // STBIDEF float *stbi_loadf (char const *filename, int *x, int *y, int *channels_in_file, int desired_channels);
-    // STBIDEF float *stbi_loadf_from_file (FILE *f, int *x, int *y, int *channels_in_file, int desired_channels);
+        StbiPtr<uint8_t> load_image_8_from_memory(const void* ptr, size_t len, Point& shape) {
+            return load_image<uint8_t>(&stbi_load_from_memory, static_cast<const stbi_uc*>(ptr), len, shape);
+        }
+
+        StbiPtr<uint16_t> load_image_16_from_memory(const void* ptr, size_t len, Point& shape) {
+            return load_image<uint16_t>(&stbi_load_16_from_memory, static_cast<const stbi_uc*>(ptr), len, shape);
+        }
+
+        StbiPtr<float> load_image_hdr_from_memory(const void* ptr, size_t len, Point& shape) {
+            return load_image<float>(&stbi_loadf_from_memory, static_cast<const stbi_uc*>(ptr), len, shape);
+        }
+
+        // Image output
+
+        // bool save_quantised_image(const std::string& filename, const std::string& format,
+        //     const uint8_t* ptr, Point shape, int channels, int quality);
+        // bool save_hdr_image(const std::string& filename, const float* ptr, Point shape, int channels);
+
+    }
 
 }

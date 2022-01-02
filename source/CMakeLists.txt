@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 3.18)
 # and propagate the new version to version.hpp.
 
 project(rs-graphics-2d
-    VERSION 0.1.8
+    VERSION 0.1.10
     LANGUAGES CXX
 )
 
@@ -62,6 +62,7 @@ add_library(${library} STATIC
 add_executable(${unittest}
     test/version-test.cpp
     test/image-test.cpp
+    test/image-io-test.cpp
     test/unit-test.cpp
 )
 

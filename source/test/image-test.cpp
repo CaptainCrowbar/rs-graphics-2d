@@ -2,7 +2,6 @@
 #include "rs-graphics-core/colour.hpp"
 #include "rs-unit-test.hpp"
 #include "test/vector-test.hpp"
-#include <string>
 
 using namespace RS::Graphics::Core;
 using namespace RS::Graphics::Plane;
@@ -182,42 +181,5 @@ void test_rs_graphics_2d_image_conversion() {
     TEST_VECTORS(*phdr.top_right(),     fc2, 1e-5);
     TEST_VECTORS(*phdr.bottom_left(),   fc2, 1e-5);
     TEST_VECTORS(*phdr.bottom_right(),  fc2, 1e-5);
-
-}
-
-void test_rs_graphics_2d_image_file_info() {
-
-    static const std::string test_dir = "../source/test/";
-    static const std::string png_file = test_dir + "test-image.png";
-    static const std::string jpg_file = test_dir + "test-image.jpg";
-    static const std::string no_such_file = test_dir + "no-such-file.png";
-
-    ImageInfo info;
-    std::string s;
-
-    TRY(info = query_image(png_file));
-    TEST(info);
-    TEST_EQUAL(info.shape.x(), 20);
-    TEST_EQUAL(info.shape.y(), 20);
-    TEST_EQUAL(info.channels, 4);
-    TEST_EQUAL(info.bits_per_channel, 8);
-    TEST(info.has_alpha);
-    TEST(! info.is_hdr);
-    TRY(s = info.str());
-    TEST_EQUAL(s, "Image:20x20,4ch@8bit,alpha");
-
-    TRY(info = query_image(jpg_file));
-    TEST(info);
-    TEST_EQUAL(info.shape.x(), 20);
-    TEST_EQUAL(info.shape.y(), 20);
-    TEST_EQUAL(info.channels, 3);
-    TEST_EQUAL(info.bits_per_channel, 8);
-    TEST(! info.has_alpha);
-    TEST(! info.is_hdr);
-    TRY(s = info.str());
-    TEST_EQUAL(s, "Image:20x20,3ch@8bit");
-
-    TRY(info = query_image(no_such_file));
-    TEST(! info);
 
 }
