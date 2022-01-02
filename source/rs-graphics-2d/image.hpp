@@ -9,6 +9,7 @@
 #include <stdexcept>
 #include <string>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace RS::Graphics::Plane {
@@ -152,7 +153,7 @@ namespace RS::Graphics::Plane {
 
         template <typename U = T>
         Image<colour_type, Flags | ImageFlags::premultiplied>
-        premultiply(std::enable_if<Core::Detail::SfinaeBoolean<U, can_premultiply && ! is_premultiplied>::value>* = nullptr) const {
+        multiply_alpha(std::enable_if<Core::Detail::SfinaeBoolean<U, can_premultiply && ! is_premultiplied>::value>* = nullptr) const {
             Image<colour_type, Flags | ImageFlags::premultiplied> result(shape());
             auto out = result.begin();
             for (auto& pixel: *this)
@@ -162,7 +163,7 @@ namespace RS::Graphics::Plane {
 
         template <typename U = T>
         Image<colour_type, Flags - ImageFlags::premultiplied>
-        unmultiply(std::enable_if<Core::Detail::SfinaeBoolean<U, can_premultiply && is_premultiplied>::value>* = nullptr) const {
+        unmultiply_alpha(std::enable_if<Core::Detail::SfinaeBoolean<U, can_premultiply && is_premultiplied>::value>* = nullptr) const {
             Image<colour_type, Flags - ImageFlags::premultiplied> result(shape());
             auto out = result.begin();
             for (auto& pixel: *this)
@@ -216,5 +217,53 @@ namespace RS::Graphics::Plane {
     using PmaImage8 = Image<Core::Rgba8, ImageFlags::premultiplied>;
     using PmaImage16 = Image<Core::Rgba16, ImageFlags::premultiplied>;
     using PmaHdrImage = Image<Core::Rgbaf, ImageFlags::premultiplied>;
+
+    template <typename C1, int F1, typename C2, int F2>
+    void convert_image(const Image<C1, F1>& in, Image<C2, F2>& out) {
+
+        using Img1 = Image<C1, F1>;
+        using Img2 = Image<C2, F2>;
+
+        if constexpr (std::is_same_v<Img1, Img2>) {
+
+            out = in;
+
+        } else if constexpr (Img1::is_premultiplied) {
+
+            auto linear_in = in.unmultiply_alpha();
+            convert_image(linear_in, out);
+
+        } else if constexpr (Img2::is_premultiplied) {
+
+            Image<C2, F2 - ImageFlags::premultiplied> linear_out;
+            convert_image(in, linear_out);
+            out = linear_out.multiply_alpha();
+
+        } else {
+
+            Img2 result(in.shape());
+            int dy, y1, y2;
+            if (Img1::is_top_down == Img2::is_top_down) {
+                dy = 1;
+                y1 = 0;
+                y2 = in.height();
+            } else {
+                dy = -1;
+                y1 = in.height() - 1;
+                y2 = -1;
+            }
+
+            for (int y = y1; y != y2; y += dy) {
+                auto i = in.locate(0, y);
+                auto j = result.locate(0, y);
+                for (int x = 0; x < in.width(); ++x, ++i, ++j)
+                    convert_colour(*i, *j);
+            }
+
+            out = std::move(result);
+
+        }
+
+    }
 
 }

@@ -78,21 +78,21 @@ void test_rs_graphics_2d_image_pixel_access() {
 
 void test_rs_graphics_2d_image_premultiplied_alpha() {
 
+    static const Rgba8 bc1 = {50,100,150,200};
+    static const Rgba8 bc2 = {39,78,118,200};
+    static const Rgbaf fc1 = {0.2,0.4,0.6,0.8};
+    static const Rgbaf fc2 = {0.16,0.32,0.48,0.8};
+
     Image8 rgb1, rgb2;
     HdrImage hdr1, hdr2;
     PmaImage8 prgb;
     PmaHdrImage phdr;
 
-    Rgba8 bc1 = {50,100,150,200};
-    Rgba8 bc2 = {39,78,118,200};
-    Rgbaf fc1 = {0.2,0.4,0.6,0.8};
-    Rgbaf fc2 = {0.16,0.32,0.48,0.8};
-
     TRY(rgb1.reset(100, 200, bc1));
     TRY(hdr1.reset(300, 400, fc1));
 
-    TRY(prgb = rgb1.premultiply());
-    TRY(phdr = hdr1.premultiply());
+    TRY(prgb = rgb1.multiply_alpha());
+    TRY(phdr = hdr1.multiply_alpha());
 
     TEST_VECTORS(*prgb.top_left(),      bc2, 0);
     TEST_VECTORS(*prgb.top_right(),     bc2, 0);
@@ -103,8 +103,8 @@ void test_rs_graphics_2d_image_premultiplied_alpha() {
     TEST_VECTORS(*phdr.bottom_left(),   fc2, 1e-5);
     TEST_VECTORS(*phdr.bottom_right(),  fc2, 1e-5);
 
-    TRY(rgb2 = prgb.unmultiply());
-    TRY(hdr2 = phdr.unmultiply());
+    TRY(rgb2 = prgb.unmultiply_alpha());
+    TRY(hdr2 = phdr.unmultiply_alpha());
 
     TEST_VECTORS(*rgb2.top_left(),      bc1, 1);
     TEST_VECTORS(*rgb2.top_right(),     bc1, 1);
@@ -114,5 +114,72 @@ void test_rs_graphics_2d_image_premultiplied_alpha() {
     TEST_VECTORS(*hdr2.top_right(),     fc1, 1e-5);
     TEST_VECTORS(*hdr2.bottom_left(),   fc1, 1e-5);
     TEST_VECTORS(*hdr2.bottom_right(),  fc1, 1e-5);
+
+}
+
+void test_rs_graphics_2d_image_conversion() {
+
+    static const Rgba8 bc1 = {50,100,150,200};
+    static const Rgba8 bc2 = {39,78,118,200};
+    static const Rgbaf fc1 = {0.2,0.4,0.6,0.8};
+    static const Rgbaf fc2 = {0.16,0.32,0.48,0.8};
+
+    Image8 rgb1, rgb2;
+    HdrImage hdr1, hdr2;
+    PmaImage8 prgb;
+    PmaHdrImage phdr;
+    Image<Rgba8, ImageFlags::bottom_up> burgb;
+    Image<Rgbaf, ImageFlags::bottom_up> buhdr;
+
+    TRY(rgb1.reset(20, 20, bc1));
+    TRY(hdr1.reset(20, 20, fc1));
+
+    TRY(convert_image(rgb1, prgb));
+    TRY(convert_image(hdr1, phdr));
+
+    TEST_VECTORS(*prgb.top_left(),      bc2, 0);
+    TEST_VECTORS(*prgb.top_right(),     bc2, 0);
+    TEST_VECTORS(*prgb.bottom_left(),   bc2, 0);
+    TEST_VECTORS(*prgb.bottom_right(),  bc2, 0);
+    TEST_VECTORS(*phdr.top_left(),      fc2, 1e-5);
+    TEST_VECTORS(*phdr.top_right(),     fc2, 1e-5);
+    TEST_VECTORS(*phdr.bottom_left(),   fc2, 1e-5);
+    TEST_VECTORS(*phdr.bottom_right(),  fc2, 1e-5);
+
+    TRY(convert_image(prgb, rgb2));
+    TRY(convert_image(phdr, hdr2));
+
+    TEST_VECTORS(*rgb2.top_left(),      bc1, 1);
+    TEST_VECTORS(*rgb2.top_right(),     bc1, 1);
+    TEST_VECTORS(*rgb2.bottom_left(),   bc1, 1);
+    TEST_VECTORS(*rgb2.bottom_right(),  bc1, 1);
+    TEST_VECTORS(*hdr2.top_left(),      fc1, 1e-5);
+    TEST_VECTORS(*hdr2.top_right(),     fc1, 1e-5);
+    TEST_VECTORS(*hdr2.bottom_left(),   fc1, 1e-5);
+    TEST_VECTORS(*hdr2.bottom_right(),  fc1, 1e-5);
+
+    TRY(convert_image(rgb1, rgb2));
+    TRY(convert_image(hdr1, hdr2));
+
+    TEST_VECTORS(*rgb2.top_left(),      bc1, 0);
+    TEST_VECTORS(*rgb2.top_right(),     bc1, 0);
+    TEST_VECTORS(*rgb2.bottom_left(),   bc1, 0);
+    TEST_VECTORS(*rgb2.bottom_right(),  bc1, 0);
+    TEST_VECTORS(*hdr2.top_left(),      fc1, 1e-5);
+    TEST_VECTORS(*hdr2.top_right(),     fc1, 1e-5);
+    TEST_VECTORS(*hdr2.bottom_left(),   fc1, 1e-5);
+    TEST_VECTORS(*hdr2.bottom_right(),  fc1, 1e-5);
+
+    TRY(convert_image(rgb2, prgb));
+    TRY(convert_image(hdr2, phdr));
+
+    TEST_VECTORS(*prgb.top_left(),      bc2, 0);
+    TEST_VECTORS(*prgb.top_right(),     bc2, 0);
+    TEST_VECTORS(*prgb.bottom_left(),   bc2, 0);
+    TEST_VECTORS(*prgb.bottom_right(),  bc2, 0);
+    TEST_VECTORS(*phdr.top_left(),      fc2, 1e-5);
+    TEST_VECTORS(*phdr.top_right(),     fc2, 1e-5);
+    TEST_VECTORS(*phdr.bottom_left(),   fc2, 1e-5);
+    TEST_VECTORS(*phdr.bottom_right(),  fc2, 1e-5);
 
 }

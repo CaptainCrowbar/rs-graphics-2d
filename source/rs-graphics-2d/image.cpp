@@ -9,7 +9,7 @@
 #define STB_IMAGE_WRITE_STATIC
 #define STBIW_WINDOWS_UTF8
 
-#if defined(__ARM_NEON__) || defined(__ARM_NEON)
+#if defined(__aarch64__) || defined(_M_ARM64)
     #define STBI_NEON
 #endif
 
