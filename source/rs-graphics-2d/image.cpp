@@ -2,8 +2,6 @@
 
 namespace RS::Graphics::Plane {
 
-    std::string thing() {
-        return "Hello world";
-    }
+    // TODO
 
 }
