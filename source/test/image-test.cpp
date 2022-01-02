@@ -2,7 +2,6 @@
 #include "rs-graphics-core/colour.hpp"
 #include "rs-unit-test.hpp"
 #include "test/vector-test.hpp"
-#include <string>
 
 using namespace RS::Graphics::Core;
 using namespace RS::Graphics::Plane;

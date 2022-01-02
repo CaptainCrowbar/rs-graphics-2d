@@ -6,6 +6,8 @@
 #include "rs-format/enum.hpp"
 #include <algorithm>
 #include <iterator>
+#include <stdexcept>
+#include <string>
 #include <type_traits>
 #include <vector>
 
@@ -21,6 +23,17 @@ namespace RS::Graphics::Plane {
         constexpr int bottom_up      = 1;  // Image is laid out bottom-up internally
         constexpr int premultiplied  = 2;  // Image uses premultiplied alpha
 
+    };
+
+    class ImageIoError:
+    public std::runtime_error {
+    public:
+        explicit ImageIoError(const std::string& file):
+            std::runtime_error(get_message(file)), file_(file) {}
+        std::string file() const { return file_; }
+    private:
+        std::string file_;
+        static std::string get_message(const std::string& file);
     };
 
     template <typename Colour, int Flags = 0>
