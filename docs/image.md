@@ -96,7 +96,7 @@ class Image::const_iterator {
 };
 ```
 
-Forward iterators over the image's pixels. Iterators have two additional
+Bidirectional iterators over the image's pixels. Iterators have two additional
 member functions:
 
 * `move()` moves the iterator along the given axis by the given number of pixels.

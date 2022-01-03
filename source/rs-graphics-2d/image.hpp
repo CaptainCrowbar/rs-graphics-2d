@@ -72,8 +72,6 @@ namespace RS::Graphics::Plane {
 
     }
 
-    // TODO - make iterators bidirectional
-
     template <typename T, typename CS, Core::ColourLayout CL, int Flags>
     class Image<Core::Colour<T, CS, CL>, Flags> {
 
@@ -85,7 +83,7 @@ namespace RS::Graphics::Plane {
         public:
 
             using difference_type = int64_t;
-            using iterator_category = std::forward_iterator_tag;
+            using iterator_category = std::bidirectional_iterator_tag;
             using pointer = CC*;
             using reference = CC&;
             using value_type = T;
@@ -98,6 +96,8 @@ namespace RS::Graphics::Plane {
             CC* operator->() const noexcept { return &**this; }
             basic_iterator& operator++() noexcept { ++index_; return *this; }
             basic_iterator operator++(int) noexcept { auto i = *this; ++*this; return i; }
+            basic_iterator& operator--() noexcept { --index_; return *this; }
+            basic_iterator operator--(int) noexcept { auto i = *this; --*this; return i; }
             bool operator==(const basic_iterator& i) const noexcept { return index_ == i.index_; }
             bool operator!=(const basic_iterator& i) const noexcept { return ! (*this == i); }
 
