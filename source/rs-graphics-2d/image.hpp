@@ -230,6 +230,7 @@ namespace RS::Graphics::Plane {
         int width() const noexcept { return shape_.x(); }
         int height() const noexcept { return shape_.y(); }
         size_t size() const noexcept { return size_t(width()) * size_t(height()); }
+        size_t bytes() const noexcept { return size() * sizeof(colour_type); }
 
         void swap(Image& img) noexcept { pixels_.swap(img.pixels_); std::swap(shape_, img.shape_); }
         friend void swap(Image& a, Image& b) noexcept { a.swap(b); }
@@ -311,17 +312,17 @@ namespace RS::Graphics::Plane {
         if constexpr (std::is_same_v<channel_type, uint8_t>) {
             auto image_ptr = load_image_8(filename, shape);
             Image<Core::Rgba8> image(shape);
-            std::memcpy(image.data(), image_ptr.get(), image.size() * sizeof(colour_type));
+            std::memcpy(image.data(), image_ptr.get(), image.bytes());
             convert_image(image, *this);
         } else if constexpr (std::is_same_v<channel_type, uint16_t>) {
             auto image_ptr = load_image_16(filename, shape);
             Image<Core::Rgba16> image(shape);
-            std::memcpy(image.data(), image_ptr.get(), image.size() * sizeof(colour_type));
+            std::memcpy(image.data(), image_ptr.get(), image.bytes());
             convert_image(image, *this);
         } else {
             auto image_ptr = load_image_hdr(filename, shape);
             Image<Core::Rgbaf> image(shape);
-            std::memcpy(image.data(), image_ptr.get(), image.size() * sizeof(colour_type));
+            std::memcpy(image.data(), image_ptr.get(), image.bytes());
             convert_image(image, *this);
         }
     }

@@ -14,9 +14,11 @@ void test_rs_graphics_2d_image_construction() {
     TEST_EQUAL(rgb.width(),   0);
     TEST_EQUAL(rgb.height(),  0);
     TEST_EQUAL(rgb.size(),    0u);
+    TEST_EQUAL(rgb.bytes(),   0u);
     TEST_EQUAL(hdr.width(),   0);
     TEST_EQUAL(hdr.height(),  0);
     TEST_EQUAL(hdr.size(),    0u);
+    TEST_EQUAL(hdr.bytes(),   0u);
 
     TRY(rgb.reset(100, 200));
     TRY(hdr.reset(300, 400));
@@ -24,9 +26,11 @@ void test_rs_graphics_2d_image_construction() {
     TEST_EQUAL(rgb.width(),   100);
     TEST_EQUAL(rgb.height(),  200);
     TEST_EQUAL(rgb.size(),    20'000u);
+    TEST_EQUAL(rgb.bytes(),   80'000u);
     TEST_EQUAL(hdr.width(),   300);
     TEST_EQUAL(hdr.height(),  400);
     TEST_EQUAL(hdr.size(),    120'000u);
+    TEST_EQUAL(hdr.bytes(),   1'920'000u);
 
 }
 

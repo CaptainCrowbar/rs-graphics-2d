@@ -324,9 +324,10 @@ Query the dimensions of the image.
 
 ```c++
 size_t Image::size() const noexcept;
+size_t Image::bytes() const noexcept;
 ```
 
-The number of pixels in the image.
+The size of the image, in pixels or bytes.
 
 ```c++
 void Image::swap(Image& img) noexcept;
