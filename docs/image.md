@@ -267,9 +267,10 @@ void Image::save(const std::string& filename, int quality = 90) const;
 ```
 
 Save an image to a file. The image format is deduced from the file name.
-Supported formats are BMP, HDR/RGBE, JPEG, PNG, and TGA. This will throw
-`ImageIoError` if the image format is not supported or an I/O error is
-encountered.
+Supported formats are BMP, HDR/RGBE, JPEG, PNG, and TGA. For JPEG images, the
+quality setting is clamped to `[1,100]`; for other formats the quality
+argument is ignored. This will throw `ImageIoError` if the image format is
+not supported or an I/O error is encountered.
 
 ```c++
 ImageInfo query_image(const std::string& filename) noexcept;
