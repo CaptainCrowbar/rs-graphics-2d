@@ -1,6 +1,8 @@
 #include "rs-graphics-2d/font.hpp"
 #include "rs-graphics-2d/file.hpp"
+#include "rs-format/enum.hpp"
 #include "rs-format/unicode.hpp"
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstdio>
@@ -44,9 +46,9 @@ namespace RS::Graphics::Plane {
 
         // https://docs.microsoft.com/en-us/typography/opentype/spec/otff
 
-        constexpr uint32_t ttf_magic = 0x00010000ul;
         constexpr uint32_t otf_magic = 0x4f54544ful; // "OTTO"
         constexpr uint32_t ttc_magic = 0x74746366ul; // "ttcf"
+        constexpr uint32_t ttf_magic = 0x00010000ul;
 
         struct FontCoreInfo {
             stbtt_fontinfo info;
@@ -65,34 +67,34 @@ namespace RS::Graphics::Plane {
             int language;
         };
 
-        enum class FontNameId: int {
-            copyright                    = 0,
-            family                       = 1,
-            subfamily                    = 2,
-            unique_subfamily_id          = 3,
-            full_name                    = 4,
-            version                      = 5,
-            postscript_name              = 6,
-            trademark                    = 7,
-            manufacturer                 = 8,
-            designer                     = 9,
-            description                  = 10,
-            vendor_url                   = 11,
-            designer_url                 = 12,
-            license                      = 13,
-            license_url                  = 14,
-            reserved                     = 15,
-            typographic_family           = 16,
-            typographic_subfamily        = 17,
-            compatible_full              = 18,
-            sample_text                  = 19,
-            postscript_cid               = 20,
-            wws_family                   = 21,
-            wws_subfamily                = 22,
-            light_background             = 23,
-            dark_background              = 24,
-            postscript_variation_prefix  = 25,
-        };
+        RS_DEFINE_ENUM_CLASS(FontNameId, int, 0,
+            copyright,
+            family,
+            subfamily,
+            unique_subfamily_id,
+            full_name,
+            version,
+            postscript_name,
+            trademark,
+            manufacturer,
+            designer,
+            description,
+            vendor_url,
+            designer_url,
+            license,
+            license_url,
+            reserved,
+            typographic_family,
+            typographic_subfamily,
+            compatible_full,
+            sample_text,
+            postscript_cid,
+            wws_family,
+            wws_subfamily,
+            light_background,
+            dark_background,
+            postscript_variation_prefix
+        )
 
         enum class MicrosoftLanguageId: int {
             english_uk = 0x0809,
@@ -107,7 +109,7 @@ namespace RS::Graphics::Plane {
         }
 
         bool decode_mac_roman(const std::string& roman, std::u32string& utf32) {
-            constexpr std::array<char32_t, 256> code_table = {{
+            static constexpr std::array<char32_t, 256> code_table = {{
                 0x0000, 0x0001, 0x0002, 0x0003, 0x0004, 0x0005, 0x0006, 0x0007, 0x0008, 0x0009, 0x000A, 0x000B, 0x000C, 0x000D, 0x000E, 0x000F,
                 0x0010, 0x2318, 0x2713, 0x2666, 0xF8FF, 0x0015, 0x0016, 0x0017, 0x0018, 0x0019, 0x001A, 0x001B, 0x001C, 0x001D, 0x001E, 0x001F,
                 0x0020, 0x0021, 0x0022, 0x0023, 0x0024, 0x0025, 0x0026, 0x0027, 0x0028, 0x0029, 0x002A, 0x002B, 0x002C, 0x002D, 0x002E, 0x002F,
@@ -126,7 +128,7 @@ namespace RS::Graphics::Plane {
                 0xF8FF, 0x00D2, 0x00DA, 0x00DB, 0x00D9, 0x0131, 0x02C6, 0x02DC, 0x00AF, 0x02D8, 0x02D9, 0x02DA, 0x00B8, 0x02DD, 0x02DB, 0x02C7,
             }};
             std::u32string out(roman.size(), '\0');
-            std::transform(roman.begin(), roman.end(), out.begin(), [&code_table] (char c) { return code_table[uint8_t(c)]; });
+            std::transform(roman.begin(), roman.end(), out.begin(), [] (char c) { return code_table[uint8_t(c)]; });
             utf32 = std::move(out);
             return true;
         }
@@ -301,7 +303,8 @@ namespace RS::Graphics::Plane {
 
     // Font class
 
-    struct Font::font_impl: FontCoreInfo {};
+    struct Font::font_impl:
+    FontCoreInfo {};
 
     Font::Font(const std::string& filename, int index) {
         if (index < 0)
@@ -350,20 +353,25 @@ namespace RS::Graphics::Plane {
     }
 
     std::vector<Font> Font::load(const std::string& filename) {
+
         std::vector<Font> fonts;
+
         Cstdio io(filename, "rb");
         if (! io)
             return fonts;
         if (! verify_font_data(io))
             return fonts;
+
         std::fseek(io, 0, SEEK_SET);
         auto content = std::make_shared<std::string>();
         load_file(io, *content);
         if (content->empty())
             return fonts;
+
         auto data = reinterpret_cast<const unsigned char*>(content->data());
         int num_fonts = stbtt_GetNumberOfFonts(data);
         Font font;
+
         for (int i = 0; i < num_fonts; ++i) {
             int offset = stbtt_GetFontOffsetForIndex(data, i);
             auto impl = std::make_shared<font_impl>();
@@ -373,7 +381,9 @@ namespace RS::Graphics::Plane {
             font.font_ = impl;
             fonts.push_back(font);
         }
+
         return fonts;
+
     }
 
     bool Font::has_glyph_unchecked(char32_t c) const noexcept {
@@ -386,12 +396,13 @@ namespace RS::Graphics::Plane {
         int ascent_pixels = 0;
         int descent_pixels = 0;
         int line_gap_pixels = 0;
-        Point pixels_per_em;
-        Core::Float2 pixels_per_unit;
+        Point pixels_per_em = Point::null();
+        Core::Float2 pixels_per_unit = Core::Float2::null();
     };
 
     ScaledFont::ScaledFont(const Font& font, Point scale) noexcept:
-    Font(font), scaled_(std::make_shared<scaled_impl>()) {
+    Font(font),
+    scaled_(std::make_shared<scaled_impl>()) {
         if (font_) {
             scaled_->pixels_per_em = scale;
             scaled_->pixels_per_unit = Core::Float2(scale) / font_->units_per_em;
@@ -402,7 +413,7 @@ namespace RS::Graphics::Plane {
     }
 
     Point ScaledFont::scale() const noexcept {
-        return scaled_ ? scaled_->pixels_per_em : Point(0,0);
+        return scaled_ ? scaled_->pixels_per_em : Point::null();
     }
 
     int ScaledFont::ascent() const noexcept {
@@ -418,8 +429,10 @@ namespace RS::Graphics::Plane {
     }
 
     Core::Box_i2 ScaledFont::text_box(const std::string& text, int line_shift) const {
+
         if (! font_ || text.empty())
             return {};
+
         auto utext = Format::decode_string(text);
         int x = 0, y = 0;
         int x0 = 0, x1 = 0, y0 = 0, y1 = 0;
@@ -427,32 +440,44 @@ namespace RS::Graphics::Plane {
         size_t length = utext.size();
         float sx = scaled_->pixels_per_unit.x();
         float sy = scaled_->pixels_per_unit.y();
+
         for (size_t i = 0; i < length; ++i) {
+
             if (utext[i] == '\n') {
                 x = 0;
                 y += ascent() - descent() + line_gap() + line_shift;
                 continue;
             }
+
             stbtt_GetCodepointBitmapBox(&font_->info, int(utext[i]), sx, sy, &x0, &y0, &x1, &y1);
+
             if (x0 != 0 || y0 != 0 || x1 != 0 || y1 != 0) {
                 min_x = std::min(min_x, x + x0);
                 max_x = std::max(max_x, x + x1);
                 min_y = std::min(min_y, y + y0);
                 max_y = std::max(max_y, y + y1);
             }
+
             if (i + 1 < length) {
                 int advance, left_bearing;
                 stbtt_GetCodepointHMetrics(&font_->info, int(utext[i]), &advance, &left_bearing);
                 int kern_advance = stbtt_GetCodepointKernAdvance(&font_->info, int(utext[i]), int(utext[i + 1]));
                 x += scale_x(advance + kern_advance);
             }
+
         }
-        return Core::Box_i2({min_x, min_y}, {max_x - min_x, max_y - min_y});
+
+        Core::Box_i2 box = {{min_x, min_y}, {max_x - min_x, max_y - min_y}};
+
+        return box;
+
     }
 
     size_t ScaledFont::text_fit(const std::string& text, size_t max_pixels) const {
+
         if (! font_ || text.empty())
             return 0;
+
         auto utext = Format::decode_string(text);
         int x0 = 0, y0 = 0, x1 = 0, y1 = 0;
         int x = 0, min_x = 0, max_x = 0;
@@ -460,10 +485,14 @@ namespace RS::Graphics::Plane {
         size_t i = 0;
         float sx = scaled_->pixels_per_unit.x();
         float sy = scaled_->pixels_per_unit.y();
+
         for (i = 0; i < length; ++i) {
+
             if (utext[i] == U'\n')
                 return 0;
+
             stbtt_GetCodepointBitmapBox(&font_->info, int(utext[i]), sx, sy, &x0, &y0, &x1, &y1);
+
             if (x0 != 0 || y0 != 0 || x1 != 0 || y1 != 0) {
                 min_x = std::min(min_x, x + x0);
                 max_x = std::max(max_x, x + x1);
@@ -471,17 +500,23 @@ namespace RS::Graphics::Plane {
                 if (test_width > max_pixels)
                     break;
             }
+
             if (i + 1 < length) {
                 int advance, left_bearing;
                 stbtt_GetCodepointHMetrics(&font_->info, int(utext[i]), &advance, &left_bearing);
                 int kern_advance = stbtt_GetCodepointKernAdvance(&font_->info, int(utext[i]), int(utext[i + 1]));
                 x += scale_x(advance + kern_advance);
             }
+
         }
+
         if (i == length)
             return npos;
+
         auto prefix = Format::encode_utf8_string(utext.substr(0, i));
+
         return prefix.size();
+
     }
 
     int ScaledFont::text_wrap(const std::string& text_in, std::string& text_out, size_t max_pixels) const {
@@ -528,7 +563,7 @@ namespace RS::Graphics::Plane {
     }
 
     ScaledFont::bitmap_ref ScaledFont::render_glyph_bitmap(char32_t c, Point& offset) const {
-        offset = {0,0};
+        offset = Point::null();
         int width, height, xoff, yoff;
         auto bitmap_ptr = stbtt_GetCodepointBitmap(&font_->info, scaled_->pixels_per_unit.x(), scaled_->pixels_per_unit.y(),
             int(c), &width, &height, &xoff, &yoff);
@@ -540,17 +575,23 @@ namespace RS::Graphics::Plane {
     }
 
     ScaledFont::bitmap_ref ScaledFont::render_text_bitmap(const std::u32string& utext, int line_shift, Point& offset) const {
+
         size_t length = utext.size();
         std::vector<bitmap_ref> glyph_bitmaps(length);
         std::vector<Point> glyph_offsets(length); // Top left of glyph bitmap relative to initial reference point
         int line_delta = line_offset() + line_shift;
         int min_x = 0, max_x = 0, min_y = 0, max_y = 0;
-        Point ref_point = {0,0};
+        Point ref_point = Point::null();
+
         for (size_t i = 0; i < length; ++i) {
+
             if (utext[i] == U'\n') {
+
                 ref_point.x() = 0;
                 ref_point.y() += line_delta;
+
             } else {
+
                 glyph_bitmaps[i] = render_glyph_bitmap(utext[i], glyph_offsets[i]);
                 glyph_offsets[i] += ref_point;
                 min_x = std::min(min_x, glyph_offsets[i].x());
@@ -562,24 +603,34 @@ namespace RS::Graphics::Plane {
                 ref_point.x() += scale_x(advance);
                 if (i + 1 < length && utext[i + 1] != U'\n')
                     ref_point.x() += scale_x(stbtt_GetCodepointKernAdvance(&font_->info, int(utext[i]), int(utext[i + 1])));
+
             }
+
         }
+
         offset = {min_x, min_y};
         Point text_shape = Point{max_x, max_y} - offset;
         bitmap_ref text_bitmap(text_shape);
+
         for (size_t i = 0; i < length; ++i) {
+
             if (glyph_bitmaps[i].empty())
                 continue;
+
             auto glyph_offset = glyph_offsets[i] - offset;
             Point shape = glyph_bitmaps[i].shape();
+
             for (int glyph_y = 0, text_y = glyph_offset.y(); glyph_y < shape.y(); ++glyph_y, ++text_y) {
                 auto glyph_ptr = &glyph_bitmaps[i][{0, glyph_y}];
                 auto text_ptr = &text_bitmap[{glyph_offset.x(), text_y}];
                 for (int x = 0; x < shape.x(); ++x, ++text_ptr, ++glyph_ptr)
                     *text_ptr = std::max(*text_ptr, *glyph_ptr);
             }
+
         }
+
         return text_bitmap;
+
     }
 
     int ScaledFont::scale_x(int x) const noexcept {
@@ -599,7 +650,8 @@ namespace RS::Graphics::Plane {
     }
 
     ScaledFont::bitmap_ref::bitmap_ref(Point shape, unsigned char* ptr) noexcept:
-    ptr_(), shape_(shape) {
+    ptr_(),
+    shape_(shape) {
         if (ptr) {
             ptr_.reset(ptr, [] (unsigned char* p) { if (p) stbtt_FreeBitmap(p, nullptr); });
         } else {
@@ -634,13 +686,21 @@ namespace RS::Graphics::Plane {
     Font FontMap::find(const std::vector<std::string>& families, int style) const {
 
         static const std::vector<std::vector<std::string>> style_names = {
-            /* regular */       { "Regular", "Book", "Medium", "Plain", "Roman", "Solid", "Light", "Thin", "W3" },
-            /* bold */          { "Bold", "Black", "Semibold", "W6" },
-            /* italic */        { "Italic", "Inclined", "Oblique",
-                                    "Regular Italic", "RegularItalic", "Book Italic", "BookItalic",
-                                    "Medium Italic", "MediumItalic", "Light Italic", "LightItalic" },
-            /* bold italic */   { "Bold Italic", "BoldItalic", "Bold Inclined", "BoldInclined",
-                                    "Bold Oblique", "BoldOblique", "Black Italic", "BlackItalic" },
+            { // Regular
+                "Regular", "Book", "Medium", "Plain", "Roman", "Solid", "Light", "Thin", "W3"
+            },
+            { // Bold
+                "Bold", "Black", "Semibold", "W6"
+            },
+            { // Italic
+                "Italic", "Inclined", "Oblique",
+                "Regular Italic", "RegularItalic", "Book Italic", "BookItalic",
+                "Medium Italic", "MediumItalic", "Light Italic", "LightItalic"
+            },
+            { // Bold italic
+                "Bold Italic", "BoldItalic", "Bold Inclined", "BoldInclined",
+                "Bold Oblique", "BoldOblique", "Black Italic", "BlackItalic"
+            },
         };
 
         int style_index = style & 3;
@@ -720,6 +780,7 @@ namespace RS::Graphics::Plane {
 
             std::string home = get_home_dir();
             std::string dir;
+
             for (auto& cdir: system_font_dirs) {
                 if (cdir[0] == '~' && cdir[1] == '/' && ! home.empty())
                     dir = merge_paths(home, cdir + 2);
