@@ -1,5 +1,4 @@
 #include "rs-graphics-2d/image.hpp"
-#include "rs-format/format.hpp"
 #include "rs-format/string.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION

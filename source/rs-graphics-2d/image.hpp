@@ -3,6 +3,7 @@
 #include "rs-graphics-core/colour.hpp"
 #include "rs-graphics-core/colour-space.hpp"
 #include "rs-graphics-core/vector.hpp"
+#include "rs-format/format.hpp"
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
@@ -147,8 +148,6 @@ namespace RS::Graphics::Plane {
 
         static_assert(colour_type::can_premultiply || ! is_premultiplied);
 
-        // TODO - validate dimensions
-
         Image() noexcept: pixels_(), shape_(0, 0) {}
         explicit Image(Point shape) { reset(shape); }
         Image(Point shape, colour_type c) { reset(shape, c); }
@@ -213,13 +212,13 @@ namespace RS::Graphics::Plane {
         void reset(Point shape, colour_type c) { reset(shape.x(), shape.y(), c); }
 
         void reset(int w, int h) {
-            size_t n = size_t(w) * size_t(h);
+            size_t n = check_size(w, h);
             pixels_.resize(n);
             shape_ = {w, h};
         }
 
         void reset(int w, int h, colour_type c) {
-            size_t n = size_t(w) * size_t(h);
+            size_t n = check_size(w, h);
             pixels_.clear();
             pixels_.resize(n, c);
             shape_ = {w, h};
@@ -244,6 +243,12 @@ namespace RS::Graphics::Plane {
         Point shape_;
 
         int64_t make_index(int x, int y) const noexcept { return int64_t(width()) * y + x; }
+
+        static size_t check_size(int w, int h) {
+            if (w < 0 || h < 0 || (w == 0) != (h == 0))
+                throw std::invalid_argument(RS::Format::format("Invalid image dimensions: {0} x {1}", w, h));
+            return size_t(w) * size_t(h);
+        }
 
     };
 

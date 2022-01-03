@@ -151,19 +151,15 @@ The default constructor creates an empty image with zero width and height.
 
 ```c++
 explicit Image::Image(Point shape);
-Image::Image(int w, int h);
-```
-
-Create an image with the specified dimensions. The image data is
-uninitialized.
-
-```c++
 Image::Image(Point shape, Colour c);
+Image::Image(int w, int h);
 Image::Image(int w, int h, Colour c);
 ```
 
-Create an image with the specified dimensions, setting all pixels to the same
-colour.
+Create an image with the specified dimensions. If a colour is supplied, the
+new image will be filled with that colour; otherwise, the pixel data is left
+uninitialized. These will throw `std::invalid_argument` if either dimension
+is negative, or if one is zero but the other is not.
 
 ```c++
 Image::Image(const Image& img);
@@ -312,7 +308,8 @@ void Image::reset(int w, int h, Colour c);
 
 Changes the image shape to the specified dimensions. If a colour is supplied,
 the new image will be filled with that colour; otherwise, the pixel data is
-left uninitialized.
+left uninitialized. These will throw `std::invalid_argument` if either
+dimension is negative, or if one is zero but the other is not.
 
 ```c++
 Point Image::shape() const noexcept;

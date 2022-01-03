@@ -2,6 +2,7 @@
 #include "rs-graphics-core/colour.hpp"
 #include "rs-unit-test.hpp"
 #include "test/vector-test.hpp"
+#include <stdexcept>
 
 using namespace RS::Graphics::Core;
 using namespace RS::Graphics::Plane;
@@ -31,6 +32,17 @@ void test_rs_graphics_2d_image_construction() {
     TEST_EQUAL(hdr.height(),  400);
     TEST_EQUAL(hdr.size(),    120'000u);
     TEST_EQUAL(hdr.bytes(),   1'920'000u);
+
+    TEST_THROW(rgb.reset(0, 1), std::invalid_argument);
+    TEST_THROW(rgb.reset(1, 0), std::invalid_argument);
+    TEST_THROW(rgb.reset(0, -1), std::invalid_argument);
+    TEST_THROW(rgb.reset(-1, 0), std::invalid_argument);
+    TEST_THROW(rgb.reset(-1, -1), std::invalid_argument);
+    TEST_THROW(hdr.reset(0, 1), std::invalid_argument);
+    TEST_THROW(hdr.reset(1, 0), std::invalid_argument);
+    TEST_THROW(hdr.reset(0, -1), std::invalid_argument);
+    TEST_THROW(hdr.reset(-1, 0), std::invalid_argument);
+    TEST_THROW(hdr.reset(-1, -1), std::invalid_argument);
 
 }
 
