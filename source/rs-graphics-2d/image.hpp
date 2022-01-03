@@ -3,8 +3,6 @@
 #include "rs-graphics-core/colour.hpp"
 #include "rs-graphics-core/colour-space.hpp"
 #include "rs-graphics-core/vector.hpp"
-#include "rs-format/enum.hpp"
-#include "rs-format/string.hpp"
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
@@ -20,11 +18,6 @@
 namespace RS::Graphics::Plane {
 
     using Point = Core::Int2;
-
-    RS_DEFINE_ENUM_CLASS(ImageLayout, int, 0,
-        top_down,
-        bottom_up
-    )
 
     namespace ImageFlags {
 
@@ -54,7 +47,7 @@ namespace RS::Graphics::Plane {
         std::string str() const;
     };
 
-    ImageInfo query_image(const std::string& filename);
+    ImageInfo query_image(const std::string& filename) noexcept;
     inline std::ostream& operator<<(std::ostream& out, const ImageInfo& info) { return out << info.str(); }
 
     template <typename Colour, int Flags = 0>
@@ -78,6 +71,8 @@ namespace RS::Graphics::Plane {
         void save_image_hdr(const Image<Core::Rgbaf>& image, const std::string& filename);
 
     }
+
+    // TODO - make iterators bidirectional
 
     template <typename T, typename CS, Core::ColourLayout CL, int Flags>
     class Image<Core::Colour<T, CS, CL>, Flags> {
@@ -107,7 +102,6 @@ namespace RS::Graphics::Plane {
             bool operator!=(const basic_iterator& i) const noexcept { return ! (*this == i); }
 
             basic_iterator& move(int axis, int distance = 1) noexcept {
-                // Axis is 0 for x, 1 for y; you can also use 'x' and 'y'
                 int64_t d = distance;
                 if ((axis & 1) == 1)
                     d *= image_->width();
@@ -115,7 +109,7 @@ namespace RS::Graphics::Plane {
                 return *this;
             }
 
-            Core::Vector<int, 2> pos() const noexcept {
+            Point pos() const noexcept {
                 int x = int(index_ % image_->width());
                 int y = int(index_ / image_->width());
                 return {x, y};
@@ -143,16 +137,17 @@ namespace RS::Graphics::Plane {
         using iterator = basic_iterator<Image, colour_type>;
         using const_iterator = basic_iterator<const Image, const colour_type>;
 
-        static constexpr bool can_premultiply = colour_type::can_premultiply;
         static constexpr int channels = colour_type::channels;
         static constexpr Core::ColourLayout colour_layout = CL;
         static constexpr bool has_alpha = colour_type::has_alpha;
         static constexpr bool is_bottom_up = (Flags & ImageFlags::bottom_up) != 0;
         static constexpr bool is_top_down = ! is_bottom_up;
-        static constexpr bool is_premultiplied = (Flags & ImageFlags::premultiplied) != 0;
         static constexpr bool is_hdr = colour_type::is_hdr;
+        static constexpr bool is_premultiplied = (Flags & ImageFlags::premultiplied) != 0;
 
-        static_assert(can_premultiply || ! is_premultiplied);
+        static_assert(colour_type::can_premultiply || ! is_premultiplied);
+
+        // TODO - validate dimensions
 
         Image() noexcept: pixels_(), shape_(0, 0) {}
         explicit Image(Point shape) { reset(shape); }
@@ -194,7 +189,8 @@ namespace RS::Graphics::Plane {
 
         template <typename U = T>
         Image<colour_type, Flags | ImageFlags::premultiplied>
-        multiply_alpha(std::enable_if<Core::Detail::SfinaeBoolean<U, can_premultiply && ! is_premultiplied>::value>* = nullptr) const {
+        multiply_alpha(std::enable_if<Core::Detail::SfinaeBoolean<U, colour_type::can_premultiply
+                && ! is_premultiplied>::value>* = nullptr) const {
             Image<colour_type, Flags | ImageFlags::premultiplied> result(shape());
             auto out = result.begin();
             for (auto& pixel: *this)
@@ -204,7 +200,8 @@ namespace RS::Graphics::Plane {
 
         template <typename U = T>
         Image<colour_type, Flags - ImageFlags::premultiplied>
-        unmultiply_alpha(std::enable_if<Core::Detail::SfinaeBoolean<U, can_premultiply && is_premultiplied>::value>* = nullptr) const {
+        unmultiply_alpha(std::enable_if<Core::Detail::SfinaeBoolean<U, colour_type::can_premultiply
+                && is_premultiplied>::value>* = nullptr) const {
             Image<colour_type, Flags - ImageFlags::premultiplied> result(shape());
             auto out = result.begin();
             for (auto& pixel: *this)
@@ -332,7 +329,7 @@ namespace RS::Graphics::Plane {
     template <typename T, typename CS, Core::ColourLayout CL, int Flags>
     void Image<Core::Colour<T, CS, CL>, Flags>::save(const std::string& filename, int quality) const {
         auto format = Detail::get_file_format(filename);
-        if (format == "hdr") {
+        if (format == "hdr" || format == "rgbe") {
             Image<Core::Rgbaf> image;
             convert_image(*this, image);
             Detail::save_image_hdr(image, filename);

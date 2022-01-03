@@ -1,5 +1,6 @@
 #include "rs-graphics-2d/image.hpp"
 #include "rs-format/format.hpp"
+#include "rs-format/string.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_STATIC
@@ -67,7 +68,7 @@ namespace RS::Graphics::Plane {
         return s;
     }
 
-    ImageInfo query_image(const std::string& filename) {
+    ImageInfo query_image(const std::string& filename) noexcept {
         ImageInfo info;
         if (! stbi_info(filename.data(), &info.shape.x(), &info.shape.y(), &info.channels))
             return info;
@@ -129,7 +130,8 @@ namespace RS::Graphics::Plane {
             if (dot <= slash || dot == npos)
                 throw ImageIoError(filename, "Unknown file format", false);
             auto format = ascii_lowercase(filename.substr(dot + 1));
-            if (format != "bmp" && format != "hdr" && format != "jpg" && format != "jpeg" && format != "png" && format != "tga")
+            if (format != "bmp" && format != "hdr" && format != "jpg" && format != "jpeg"
+                    && format != "png" && format != "rgbe" && format != "tga")
                 throw ImageIoError(filename, "Unknown file format", false);
             return format;
         }
