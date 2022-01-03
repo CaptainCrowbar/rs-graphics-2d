@@ -28,4 +28,5 @@ Other libraries required (these are all header-only):
 ## Index
 
 * [Version information](version.html)
+* [Fonts](font.html)
 * [Image](image.html)

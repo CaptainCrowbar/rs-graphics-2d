@@ -24,7 +24,7 @@ Used for pixel coordinates.
 namespace ImageFlags {
     constexpr int bottom_up;
     constexpr int premultiplied;
-};
+}
 ```
 
 Bitmask flags indicating properties of an image. Images are normally stored

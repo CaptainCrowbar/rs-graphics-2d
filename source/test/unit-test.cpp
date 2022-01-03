@@ -9,6 +9,12 @@ int main(int argc, char** argv) {
     // version-test.cpp
     UNIT_TEST(rs_graphics_2d_version)
 
+    // file-test.cpp
+    UNIT_TEST(rs_graphics_2d_file_io)
+    UNIT_TEST(rs_graphics_2d_file_paths)
+    UNIT_TEST(rs_graphics_2d_file_system)
+    UNIT_TEST(rs_graphics_2d_file_binary_io)
+
     // image-test.cpp
     UNIT_TEST(rs_graphics_2d_image_construction)
     UNIT_TEST(rs_graphics_2d_image_pixel_access)
@@ -19,6 +25,16 @@ int main(int argc, char** argv) {
     UNIT_TEST(rs_graphics_2d_image_io_file_info)
     UNIT_TEST(rs_graphics_2d_image_io_load)
     UNIT_TEST(rs_graphics_2d_image_io_save)
+
+    // font-test.cpp
+    UNIT_TEST(rs_graphics_2d_font_loading)
+    UNIT_TEST(rs_graphics_2d_font_properties)
+    UNIT_TEST(rs_graphics_2d_font_metrics)
+    UNIT_TEST(rs_graphics_2d_font_text_metrics)
+    UNIT_TEST(rs_graphics_2d_font_text_fitting)
+    UNIT_TEST(rs_graphics_2d_font_text_wrapping)
+    UNIT_TEST(rs_graphics_2d_font_rendering)
+    UNIT_TEST(rs_graphics_2d_font_map)
 
     // unit-test.cpp
 
