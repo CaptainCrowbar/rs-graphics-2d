@@ -308,7 +308,7 @@ void test_rs_graphics_2d_font_rendering() {
 
     TRY(mono = Font(mono_file));
     TRY(s_mono = ScaledFont(mono, 100));
-    TEST(s_mono.render(image, offset, text, 0, Rgbaf::blue()));
+    TRY(s_mono.render(image, offset, text, 0, Rgbaf::blue()));
     TEST_EQUAL(offset, Point(0, -77));
     TEST_EQUAL(image.shape(), Point(651, 215));
     TRY(image.save("mono1.png"));
@@ -321,7 +321,7 @@ void test_rs_graphics_2d_font_rendering() {
 
     TRY(serif = Font(serif_file));
     TRY(s_serif = ScaledFont(serif, 100));
-    TEST(s_serif.render(image, offset, text, 0, Rgbaf::blue()));
+    TRY(s_serif.render(image, offset, text, 0, Rgbaf::blue()));
     TEST_EQUAL(offset, Point(0, -76));
     TEST_EQUAL(image.shape(), Point(590, 216));
     TRY(image.save("serif1.png"));
@@ -333,7 +333,7 @@ void test_rs_graphics_2d_font_rendering() {
     TEST_EQUAL(n_empty + n_partial + n_full, int(image.size()));
 
     TRY(image.reset({1000, 500}, Rgbaf::white()));
-    TEST(s_mono.render_to(image, {100, 100}, text, 0, Rgbaf::blue()));
+    TRY(s_mono.render_to(image, {100, 100}, text, 0, Rgbaf::blue()));
     TRY(image.save("mono2.png"));
 
     TRY(take_census());
@@ -343,7 +343,7 @@ void test_rs_graphics_2d_font_rendering() {
     TEST_EQUAL(n_empty + n_partial + n_full, int(image.size()));
 
     TRY(image.reset({1000, 500}, Rgbaf::white()));
-    TEST(s_serif.render_to(image, {100, 100}, text, 0, Rgbaf::blue()));
+    TRY(s_serif.render_to(image, {100, 100}, text, 0, Rgbaf::blue()));
     TRY(image.save("serif2.png"));
 
     TRY(take_census());
@@ -361,9 +361,9 @@ void test_rs_graphics_2d_font_map() {
     std::vector<std::string> families;
 
     TRY(map.search_system());
-    TEST(map.num_families() >= 1);
+    TEST(map.size() >= 1);
     TRY(families = map.families());
-    TEST_EQUAL(families.size(), map.num_families());
+    TEST_EQUAL(families.size(), map.size());
 
     TRY(font = map.find({"Helvetica", "Arial"}));
     TEST(font);

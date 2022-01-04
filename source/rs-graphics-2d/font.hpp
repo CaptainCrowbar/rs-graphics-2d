@@ -1,6 +1,7 @@
 #pragma once
 
 #include "rs-graphics-2d/image.hpp"
+#include "rs-graphics-2d/file.hpp"
 #include "rs-graphics-core/colour.hpp"
 #include "rs-graphics-core/geometry.hpp"
 #include "rs-graphics-core/maths.hpp"
@@ -8,6 +9,7 @@
 #include "rs-format/string.hpp"
 #include <map>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -30,7 +32,7 @@ namespace RS::Graphics::Plane {
         explicit Font(const std::string& filename, int index = 0);
         virtual ~Font() noexcept {}
 
-        operator bool() const noexcept { return bool(font_); }
+        explicit operator bool() const noexcept { return bool(font_); }
 
         std::string family() const;
         std::string subfamily() const;
@@ -78,13 +80,13 @@ namespace RS::Graphics::Plane {
         int descent() const noexcept;
         int line_gap() const noexcept;
         int line_offset() const noexcept { return ascent() - descent() + line_gap(); }
-        template <typename C, int F> bool render(Image<C, F>& image, Point& offset, const std::string& text,
-            int line_shift = 0, C text_colour = C::black(), C background = C(0, 0)) const;
-        template <typename C, int F> bool render_to(Image<C, F>& image, Point ref_point, const std::string& text,
+        template <typename C, int F> void render(Image<C, F>& image, Point& offset, const std::string& text,
+            int line_shift = 0, C text_colour = C::black(), C background = C::clear()) const;
+        template <typename C, int F> void render_to(Image<C, F>& image, Point ref_point, const std::string& text,
             int line_shift = 0, C text_colour = C::black()) const;
         Core::Box_i2 text_box(const std::string& text, int line_shift = 0) const;
         size_t text_fit(const std::string& text, size_t max_pixels) const;
-        int text_wrap(const std::string& text_in, std::string& text_out, size_t max_pixels) const;
+        size_t text_wrap(const std::string& text_in, std::string& text_out, size_t max_pixels) const;
 
     private:
 
@@ -124,21 +126,21 @@ namespace RS::Graphics::Plane {
         // TODO - check for premultiplied alpha
 
         template <typename C, int F>
-        bool ScaledFont::render(Image<C, F>& image, Point& offset, const std::string& text, int line_shift, C text_colour, C background) const {
+        void ScaledFont::render(Image<C, F>& image, Point& offset, const std::string& text, int line_shift, C text_colour, C background) const {
 
             static_assert(C::colour_space::is_linear);
             static_assert(C::has_alpha);
 
-            offset = {0,0};
+            offset = Point::null();
             if (! font_)
-                return false;
+                throw std::invalid_argument("No font");
             if (text.empty())
-                return true;
+                return;
 
             auto utext = Format::decode_string(text);
             auto bitmap = render_text_bitmap(utext, line_shift, offset);
             if (bitmap.empty())
-                return true;
+                return;
 
             image.reset(bitmap.shape(), background);
             auto bptr = bitmap.begin();
@@ -148,26 +150,24 @@ namespace RS::Graphics::Plane {
                 pixel = alpha_blend(text_colour, background);
             }
 
-            return true;
-
         }
 
         template <typename C, int F>
-        bool ScaledFont::render_to(Image<C, F>& image, Point ref_point, const std::string& text, int line_shift, C text_colour) const {
+        void ScaledFont::render_to(Image<C, F>& image, Point ref_point, const std::string& text, int line_shift, C text_colour) const {
 
             static_assert(C::colour_space::is_linear);
             static_assert(C::has_alpha);
 
             if (! font_)
-                return false;
+                throw std::invalid_argument("No font");
             if (text.empty())
-                return true;
+                return;
 
             auto utext = Format::decode_string(text);
             Point offset;
             auto bitmap = render_text_bitmap(utext, line_shift, offset);
             if (bitmap.empty())
-                return true;
+                return;
 
             // i_ prefix = image coordinates, b_ prefix = bitmap coordinates
             // ic_, bc_ prefix = clipped to image bounds
@@ -178,7 +178,7 @@ namespace RS::Graphics::Plane {
             Point ic_apex = minv(i_apex, image.shape());
 
             if (ic_base.x() >= ic_apex.x() || ic_base.y() >= ic_apex.y())
-                return true;
+                return;
 
             Point bc_base = ic_base - i_base;
             int width = ic_apex.x() - ic_base.x();
@@ -191,8 +191,6 @@ namespace RS::Graphics::Plane {
                     *i_iter = alpha_blend(text_colour, *i_iter);
                 }
             }
-
-            return true;
 
         }
 
@@ -208,9 +206,9 @@ namespace RS::Graphics::Plane {
         std::vector<std::string> subfamilies(const std::string& family) const;
         Font find(const std::vector<std::string>& families, int style = FontStyle::regular) const;
         Font load(const std::string& family, const std::string& subfamily) const;
-        size_t num_families() const noexcept { return table_.size(); }
         void search(const std::string& dir, int flags = 0);
         void search_system();
+        size_t size() const noexcept { return table_.size(); }
 
     private:
 

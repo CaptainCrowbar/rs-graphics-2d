@@ -1,5 +1,4 @@
 #include "rs-graphics-2d/font.hpp"
-#include "rs-graphics-2d/file.hpp"
 #include "rs-format/enum.hpp"
 #include "rs-format/unicode.hpp"
 #include <algorithm>
@@ -9,7 +8,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <iterator>
-#include <stdexcept>
 #include <utility>
 
 #ifdef _MSC_VER
@@ -475,7 +473,9 @@ namespace RS::Graphics::Plane {
 
     size_t ScaledFont::text_fit(const std::string& text, size_t max_pixels) const {
 
-        if (! font_ || text.empty())
+        if (! font_)
+            throw std::invalid_argument("No font");
+        if (text.empty())
             return 0;
 
         auto utext = Format::decode_string(text);
@@ -489,7 +489,7 @@ namespace RS::Graphics::Plane {
         for (i = 0; i < length; ++i) {
 
             if (utext[i] == U'\n')
-                return 0;
+                throw std::invalid_argument("Multiple lines in text fit test");
 
             stbtt_GetCodepointBitmapBox(&font_->info, int(utext[i]), sx, sy, &x0, &y0, &x1, &y1);
 
@@ -519,12 +519,12 @@ namespace RS::Graphics::Plane {
 
     }
 
-    int ScaledFont::text_wrap(const std::string& text_in, std::string& text_out, size_t max_pixels) const {
+    size_t ScaledFont::text_wrap(const std::string& text_in, std::string& text_out, size_t max_pixels) const {
 
         text_out.clear();
 
         if (! font_)
-            return -1;
+            throw std::invalid_argument("No font");
 
         std::vector<std::string> lines;
         auto paras = Format::split(text_in, "\n");
@@ -558,7 +558,7 @@ namespace RS::Graphics::Plane {
 
         text_out = Format::join(lines, "\n");
 
-        return int(lines.size());
+        return lines.size();
 
     }
 
