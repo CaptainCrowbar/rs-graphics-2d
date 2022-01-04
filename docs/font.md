@@ -149,8 +149,10 @@ lines, and is equal to `ascent()-descent()+line_gap()`. All measures are in
 pixels.
 
 ```c++
-template <typename C, int F> void ScaledFont::render(Image<C, F>& image, Point& offset, const std::string& text,
-    int line_shift = 0, C text_colour = C::black(), C background = C::clear()) const;
+template <typename C, int F>
+    void ScaledFont::render(Image<C, F>& image, Point& offset,
+        const std::string& text, int line_shift = 0,
+        C text_colour = C::black(), C background = C::clear()) const;
 ```
 
 This function renders text to a new image. The supplied `image` object will be
@@ -173,8 +175,10 @@ contains invalid UTF-8. It will run without error if nothing was rendered
 because the text is empty or contains only whitespace characters.
 
 ```c++
-template <typename C, int F> void ScaledFont::render_to(Image<C, F>& image, Point ref_point, const std::string& text,
-    int line_shift = 0, C text_colour = C::black()) const;
+template <typename C, int F>
+    void ScaledFont::render_to(Image<C, F>& image, Point ref_point,
+        const std::string& text, int line_shift = 0,
+        C text_colour = C::black()) const;
 ```
 
 This function renders text to an existing image. The image must have a linear
@@ -198,7 +202,8 @@ because the text is empty or contains only whitespace characters, or the
 rendered glyphs fall entirely outside the image.
 
 ```c++
-Core::Box_i2 ScaledFont::text_box(const std::string& text, int line_shift = 0) const;
+Core::Box_i2 ScaledFont::text_box(const std::string& text,
+    int line_shift = 0) const;
 ```
 
 Returns the bounding box of the supplied text, with the origin at the
@@ -225,7 +230,8 @@ This will throw `std::invalid_argument` if the font is null, or the text
 contains invalid UTF-8 or any line feed characters.
 
 ```c++
-size_t ScaledFont::text_wrap(const std::string& text_in, std::string& text_out, size_t max_pixels) const;
+size_t ScaledFont::text_wrap(const std::string& text_in,
+    std::string& text_out, size_t max_pixels) const;
 ```
 
 Wrap text at word boundaries (determined by ASCII whitespace) to fit into the
@@ -269,7 +275,8 @@ Clears all fonts from the map.
 
 ```c++
 bool FontMap::contains(const std::string& family) const noexcept;
-bool FontMap::contains(const std::string& family, const std::string& subfamily) const noexcept;
+bool FontMap::contains(const std::string& family,
+    const std::string& subfamily) const noexcept;
 ```
 
 True if the `FontMap` contains any fonts matching the given names.
@@ -294,7 +301,8 @@ Returns a list of all subfamily names for the given family. This will return
 an empty list if `contains(family)` is false.
 
 ```c++
-Font FontMap::find(const std::vector<std::string>& families, int style = FontStyle::regular) const;
+Font FontMap::find(const std::vector<std::string>& families,
+    int style = FontStyle::regular) const;
 ```
 
 Loads the first matching font in the `FontMap`. This will first search the
@@ -306,7 +314,8 @@ combined with one or both of the other style options, a fallback will be
 accepted for those too.
 
 ```c++
-Font FontMap::load(const std::string& family, const std::string& subfamily) const;
+Font FontMap::load(const std::string& family,
+    const std::string& subfamily) const;
 ```
 
 Loads the font with the given family and subfamily name. This will return a
