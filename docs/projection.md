@@ -70,25 +70,7 @@ currently supported.
 
 ### Class hierarchy
 
-    MapProjection [abstract]
-     └─ BasicMapProjection<T> [abstract]
-         ├─ AzimuthalProjection<T> [abstract]
-         │   ├─ AzimuthalEquidistantProjection<T>
-         │   ├─ GnomonicProjection<T>
-         │   ├─ LambertAzimuthalProjection<T>
-         │   ├─ OrthographicProjection<T>
-         │   └─ StereographicProjection<T>
-         ├─ CylindricalProjection<T> [abstract]
-         │   ├─ CylindricalEquidistantProjection<T>
-         │   ├─ GallPetersProjection<T>
-         │   ├─ LambertCylindricalProjection<T>
-         │   └─ MercatorProjection<T>
-         └─ PseudocylindricalProjection<T> [abstract]
-             ├─ Eckert4Projection<T>
-             ├─ MollweideProjection<T>
-             ├─ SinusoidalProjection<T>
-             └─ InterruptedProjectionBase<T> [abstract]
-                 └─ InterruptedProjection<Projection>
+![Map projection class hierarchy](images/projection-classes.drawio.png)
 
 ### Map projection base class
 
