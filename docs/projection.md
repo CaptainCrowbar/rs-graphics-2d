@@ -137,7 +137,7 @@ using BasicMapProjection::vector_type = Core::Vector<T, 2>;
 Member types.
 
 ```c++
-static constexpr vector_type BasicMapProjection::default_origin = {0,π/2};
+static constexpr vector_type BasicMapProjection::default_origin = {0,pi/2};
 ```
 
 The default origin (centre point) for maps, the point where the prime meridian
