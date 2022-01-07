@@ -30,3 +30,4 @@ Other libraries required (these are all header-only):
 * [Version information](version.html)
 * [Fonts](font.html)
 * [Image](image.html)
+* [Map projections](projection.html)

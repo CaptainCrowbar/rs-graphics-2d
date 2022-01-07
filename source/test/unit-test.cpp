@@ -36,6 +36,25 @@ int main(int argc, char** argv) {
     UNIT_TEST(rs_graphics_2d_font_rendering)
     UNIT_TEST(rs_graphics_2d_font_map)
 
+    // projection-test.cpp
+    UNIT_TEST(rs_graphics_2d_projection_polar_coordinate_normalisation)
+    UNIT_TEST(rs_graphics_2d_projection_azimuthal_equidistant)
+    UNIT_TEST(rs_graphics_2d_projection_gnomonic)
+    UNIT_TEST(rs_graphics_2d_projection_lambert_azimuthal)
+    UNIT_TEST(rs_graphics_2d_projection_orthographic)
+    UNIT_TEST(rs_graphics_2d_projection_stereographic)
+    UNIT_TEST(rs_graphics_2d_projection_cylindrical_equidistant)
+    UNIT_TEST(rs_graphics_2d_projection_gall_peters)
+    UNIT_TEST(rs_graphics_2d_projection_lambert_cylindrical)
+    UNIT_TEST(rs_graphics_2d_projection_mercator)
+    UNIT_TEST(rs_graphics_2d_projection_eckert_iv)
+    UNIT_TEST(rs_graphics_2d_projection_mollweide)
+    UNIT_TEST(rs_graphics_2d_projection_sinusoidal)
+    UNIT_TEST(rs_graphics_2d_projection_interrupted_eckert_iv)
+    UNIT_TEST(rs_graphics_2d_projection_interrupted_mollweide)
+    UNIT_TEST(rs_graphics_2d_projection_interrupted_sinusoidal)
+    UNIT_TEST(rs_graphics_2d_projection_sample_maps)
+
     // unit-test.cpp
 
     return RS::UnitTest::end_tests();
