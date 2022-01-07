@@ -10,6 +10,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <thread>
 #include <vector>
 
 using namespace RS::Format;
@@ -28,8 +29,7 @@ namespace {
     constexpr Double2 xy_north = {0.1, 0.1};
     constexpr Double2 xy_south = {0.1, -0.1};
 
-    // TODO
-    const std::string docs_image_dir = ""; // "../docs/images/";
+    const std::string docs_image_dir = "../docs/images/";
     const std::string test_image_dir = "../source/test/images/";
     const std::string earth_map = test_image_dir + "nasa-earth.png";
 
@@ -597,26 +597,25 @@ namespace {
 
 void test_rs_graphics_2d_projection_sample_maps() {
 
-    (void)make_map;
+    std::vector<std::thread> threads;
 
-//     ThreadPool pool;
+    threads.emplace_back([] { make_map(std::make_shared<AzimuthalEquidistantProjection<double>>()); });
+    threads.emplace_back([] { make_map(std::make_shared<GnomonicProjection<double>>()); });
+    threads.emplace_back([] { make_map(std::make_shared<LambertAzimuthalProjection<double>>()); });
+    threads.emplace_back([] { make_map(std::make_shared<OrthographicProjection<double>>()); });
+    threads.emplace_back([] { make_map(std::make_shared<StereographicProjection<double>>()); });
+    threads.emplace_back([] { make_map(std::make_shared<CylindricalEquidistantProjection<double>>()); });
+    threads.emplace_back([] { make_map(std::make_shared<GallPetersProjection<double>>()); });
+    threads.emplace_back([] { make_map(std::make_shared<LambertCylindricalProjection<double>>()); });
+    threads.emplace_back([] { make_map(std::make_shared<MercatorProjection<double>>()); });
+    threads.emplace_back([] { make_map(std::make_shared<Eckert4Projection<double>>()); });
+    threads.emplace_back([] { make_map(std::make_shared<MollweideProjection<double>>()); });
+    threads.emplace_back([] { make_map(std::make_shared<SinusoidalProjection<double>>()); });
+    threads.emplace_back([] { make_map(std::make_shared<InterruptedProjection<Eckert4Projection<double>>>()); });
+    threads.emplace_back([] { make_map(std::make_shared<InterruptedProjection<MollweideProjection<double>>>()); });
+    threads.emplace_back([] { make_map(std::make_shared<InterruptedProjection<SinusoidalProjection<double>>>()); });
 
-//     pool.add([] { make_map(std::make_shared<AzimuthalEquidistantProjection<double>>()); });
-//     pool.add([] { make_map(std::make_shared<GnomonicProjection<double>>()); });
-//     pool.add([] { make_map(std::make_shared<LambertAzimuthalProjection<double>>()); });
-//     pool.add([] { make_map(std::make_shared<OrthographicProjection<double>>()); });
-//     pool.add([] { make_map(std::make_shared<StereographicProjection<double>>()); });
-//     pool.add([] { make_map(std::make_shared<CylindricalEquidistantProjection<double>>()); });
-//     pool.add([] { make_map(std::make_shared<GallPetersProjection<double>>()); });
-//     pool.add([] { make_map(std::make_shared<LambertCylindricalProjection<double>>()); });
-//     pool.add([] { make_map(std::make_shared<MercatorProjection<double>>()); });
-//     pool.add([] { make_map(std::make_shared<Eckert4Projection<double>>()); });
-//     pool.add([] { make_map(std::make_shared<MollweideProjection<double>>()); });
-//     pool.add([] { make_map(std::make_shared<SinusoidalProjection<double>>()); });
-//     pool.add([] { make_map(std::make_shared<InterruptedProjection<Eckert4Projection<double>>>()); });
-//     pool.add([] { make_map(std::make_shared<InterruptedProjection<MollweideProjection<double>>>()); });
-//     pool.add([] { make_map(std::make_shared<InterruptedProjection<SinusoidalProjection<double>>>()); });
-
-//     pool.wait();
+    for (auto& t: threads)
+        t.join();
 
 }

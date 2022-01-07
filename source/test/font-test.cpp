@@ -4,6 +4,7 @@
 #include "rs-graphics-core/geometry.hpp"
 #include "rs-graphics-core/vector.hpp"
 #include "rs-unit-test.hpp"
+#include <cstdio>
 #include <string>
 #include <vector>
 
