@@ -1,5 +1,4 @@
 #include "rs-graphics-2d/image.hpp"
-#include "rs-format/string.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_STATIC
@@ -39,10 +38,10 @@ using namespace RS::Format::Literals;
 
 namespace RS::Graphics::Plane {
 
-    std::string ImageIoError::make_message(const std::string& filename, const std::string& details, bool stbi) {
+    std::string ImageIoError::make_message(const IO::Path& file, const std::string& details, bool stbi) {
         std::string message = "Image I/O error";
-        if (! filename.empty())
-            message += ": " + filename;
+        if (! file.empty())
+            message += ": " + file.name();
         if (! details.empty())
             message += ": " + details;
         if (stbi) {
@@ -67,15 +66,16 @@ namespace RS::Graphics::Plane {
         return s;
     }
 
-    ImageInfo query_image(const std::string& filename) noexcept {
+    ImageInfo query_image(const IO::Path& file) noexcept {
         ImageInfo info;
-        if (! stbi_info(filename.data(), &info.shape.x(), &info.shape.y(), &info.channels))
+        auto name = file.name();
+        if (! stbi_info(name.data(), &info.shape.x(), &info.shape.y(), &info.channels))
             return info;
-        if (stbi_is_hdr(filename.data())) {
+        if (stbi_is_hdr(name.data())) {
             info.bits_per_channel = 32;
             info.is_hdr = true;
         } else {
-            info.bits_per_channel = stbi_is_16_bit(filename.data()) ? 16 : 8;
+            info.bits_per_channel = stbi_is_16_bit(name.data()) ? 16 : 8;
             info.is_hdr = false;
         }
         info.has_alpha = (info.channels & 1) == 0;
@@ -94,7 +94,7 @@ namespace RS::Graphics::Plane {
             else
                 image_ptr = stb_function(src_ptr, &shape.x(), &shape.y(), &channels_in_file, 4);
             if (image_ptr == nullptr) {
-                if constexpr (std::is_same_v<Source, const char>)
+                if constexpr (std::is_same_v<std::decay_t<Source>, char>)
                     throw ImageIoError(src_ptr, {}, true);
                 else
                     throw ImageIoError({}, {}, true);
@@ -102,60 +102,44 @@ namespace RS::Graphics::Plane {
             return StbiPtr<Channel>(static_cast<Channel*>(image_ptr));
         }
 
-        StbiPtr<uint8_t> load_image_8(const std::string& filename, Point& shape) {
-            return load_image<uint8_t>(&stbi_load, filename.data(), 0, shape);
+        StbiPtr<uint8_t> load_image_8(const IO::Path& file, Point& shape) {
+            auto name = file.name();
+            return load_image<uint8_t>(&stbi_load, name.data(), 0, shape);
         }
 
-        StbiPtr<uint16_t> load_image_16(const std::string& filename, Point& shape) {
-            return load_image<uint16_t>(&stbi_load_16, filename.data(), 0, shape);
+        StbiPtr<uint16_t> load_image_16(const IO::Path& file, Point& shape) {
+            auto name = file.name();
+            return load_image<uint16_t>(&stbi_load_16, name.data(), 0, shape);
         }
 
-        StbiPtr<float> load_image_hdr(const std::string& filename, Point& shape) {
-            return load_image<float>(&stbi_loadf, filename.data(), 0, shape);
+        StbiPtr<float> load_image_hdr(const IO::Path& file, Point& shape) {
+            auto name = file.name();
+            return load_image<float>(&stbi_loadf, name.data(), 0, shape);
         }
 
-        std::string get_file_format(const std::string& filename) {
-            size_t slash;
-            #ifdef _WIN32
-                slash = filename.find_last_of("/\\");
-            #else
-                slash = filename.find_last_of('/');
-            #endif
-            if (slash == npos)
-                slash = 0;
-            else
-                ++slash;
-            size_t dot = filename.find_last_of('.');
-            if (dot <= slash || dot == npos)
-                throw ImageIoError(filename, "Unknown file format", false);
-            auto format = ascii_lowercase(filename.substr(dot + 1));
-            if (format != "bmp" && format != "hdr" && format != "jpg" && format != "jpeg"
-                    && format != "png" && format != "rgbe" && format != "tga")
-                throw ImageIoError(filename, "Unknown file format", false);
-            return format;
-        }
-
-        void save_image_8(const Image<Core::Rgba8>& image, const std::string& filename, const std::string& format, int quality) {
+        void save_image_8(const Image<Core::Rgba8>& image, const IO::Path& file, const std::string& format, int quality) {
             quality = std::clamp(quality, 1, 100);
+            auto name = file.name();
             int rc = 0;
-            if (format == "bmp")
-                rc = stbi_write_bmp(filename.data(), image.width(), image.height(), 4, image.data());
-            else if (format == "jpg" || format == "jpeg")
-                rc = stbi_write_jpg(filename.data(), image.width(), image.height(), 4, image.data(), quality);
-            else if (format == "png")
-                rc = stbi_write_png(filename.data(), image.width(), image.height(), 4, image.data(), 0);
-            else if (format == "tga")
-                rc = stbi_write_tga(filename.data(), image.width(), image.height(), 4, image.data());
+            if (format == ".bmp")
+                rc = stbi_write_bmp(name.data(), image.width(), image.height(), 4, image.data());
+            else if (format == ".jpg" || format == ".jpeg")
+                rc = stbi_write_jpg(name.data(), image.width(), image.height(), 4, image.data(), quality);
+            else if (format == ".png")
+                rc = stbi_write_png(name.data(), image.width(), image.height(), 4, image.data(), 0);
+            else if (format == ".tga")
+                rc = stbi_write_tga(name.data(), image.width(), image.height(), 4, image.data());
             else
-                throw ImageIoError(filename, "Unknown file format", false);
+                throw ImageIoError(file, "Unknown file format", false);
             if (rc == 0)
-                throw ImageIoError(filename, {}, false);
+                throw ImageIoError(file, {}, false);
         }
 
-        void save_image_hdr(const Image<Core::Rgbaf>& image, const std::string& filename) {
-            int rc = stbi_write_hdr(filename.data(), image.width(), image.height(), 4, image.data());
+        void save_image_hdr(const Image<Core::Rgbaf>& image, const IO::Path& file) {
+            auto name = file.name();
+            int rc = stbi_write_hdr(name.data(), image.width(), image.height(), 4, image.data());
             if (rc == 0)
-                throw ImageIoError(filename, {}, false);
+                throw ImageIoError(file, {}, false);
         }
 
     }

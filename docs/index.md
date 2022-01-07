@@ -18,12 +18,12 @@ The CMake file includes an `install` target to copy the headers into
 as required, or the entire library can be included using
 `"rs-graphics-2d.hpp"`.
 
-Other libraries required (these are all header-only):
+Other libraries required:
 
 * [My core graphics library](https://github.com/CaptainCrowbar/rs-graphics-core)
 * [My formatting library](https://github.com/CaptainCrowbar/rs-format)
+* [My I/O library](https://github.com/CaptainCrowbar/rs-io)
 * [My unit test library](https://github.com/CaptainCrowbar/rs-unit-test)
-  (not required unless you want to run the unit tests).
 
 ## Index
 

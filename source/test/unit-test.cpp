@@ -9,12 +9,6 @@ int main(int argc, char** argv) {
     // version-test.cpp
     UNIT_TEST(rs_graphics_2d_version)
 
-    // file-test.cpp
-    UNIT_TEST(rs_graphics_2d_file_io)
-    UNIT_TEST(rs_graphics_2d_file_paths)
-    UNIT_TEST(rs_graphics_2d_file_system)
-    UNIT_TEST(rs_graphics_2d_file_binary_io)
-
     // image-test.cpp
     UNIT_TEST(rs_graphics_2d_image_construction)
     UNIT_TEST(rs_graphics_2d_image_pixel_access)

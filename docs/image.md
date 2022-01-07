@@ -35,7 +35,7 @@ Pixel data will be assumed to include premultiplied alpha if the
 ```c++
 class ImageIoError:
 public std::runtime_error {
-    const std::string& filename() const noexcept;
+    IO::Path file() const noexcept;
 };
 ```
 
@@ -251,29 +251,29 @@ The current implementation uses
 for image I/O.
 
 ```c++
-void Image::load(const std::string& filename);
+void Image::load(const IO::Path& file);
 ```
 
 Load an image from a file. Supported image types are BMP, GIF, HDR/RGBE, JPEG,
 PIC, PNG, PNM, PSD, and TGA (not all features are supported for some
 formats). Input channel data can be 32-bit floating point for HDR/RGBE, 8-bit
 or 16-bit integer for all other formats. This will throw `ImageIoError` if
-the operation fails (this may mean that the file was not found, that it was
-not in a supported format, or that the image was too big for the STB library
-to load; the size limit is 1-2 GB depending on format).
+the file does not exist, the image was not in a supported format, the image
+was too big for the STB library to load (the size limit is about 1-2 GB
+depending on format), or an I/O error occurs.
 
 ```c++
-void Image::save(const std::string& filename, int quality = 90) const;
+void Image::save(const IO::Path& file, int quality = 90) const;
 ```
 
 Save an image to a file. The image format is deduced from the file name.
 Supported formats are BMP, HDR/RGBE, JPEG, PNG, and TGA. For JPEG images, the
 quality setting is clamped to `[1,100]`; for other formats the quality
-argument is ignored. This will throw `ImageIoError` if the image format is
-not supported or an I/O error is encountered.
+argument is ignored. This will throw `ImageIoError` if the file does not
+exist, the image format is not supported, or an I/O error occurs
 
 ```c++
-ImageInfo query_image(const std::string& filename) noexcept;
+ImageInfo query_image(const IO::Path& file) noexcept;
 ```
 
 Queries an image file for information about the stored image. File formats

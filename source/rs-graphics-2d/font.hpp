@@ -1,12 +1,12 @@
 #pragma once
 
 #include "rs-graphics-2d/image.hpp"
-#include "rs-graphics-2d/file.hpp"
 #include "rs-graphics-core/colour.hpp"
 #include "rs-graphics-core/geometry.hpp"
 #include "rs-graphics-core/maths.hpp"
 #include "rs-graphics-core/vector.hpp"
 #include "rs-format/string.hpp"
+#include "rs-io/path.hpp"
 #include <map>
 #include <memory>
 #include <stdexcept>
@@ -29,7 +29,7 @@ namespace RS::Graphics::Plane {
     public:
 
         Font() = default;
-        explicit Font(const std::string& filename, int index = 0);
+        explicit Font(const IO::Path& file, int index = 0);
         virtual ~Font() noexcept {}
 
         explicit operator bool() const noexcept { return bool(font_); }
@@ -41,7 +41,7 @@ namespace RS::Graphics::Plane {
         bool has_glyphs(char32_t first, char32_t last) const noexcept;
         template <typename Range> bool has_glyphs(const Range& range) const;
 
-        static std::vector<Font> load(const std::string& filename);
+        static std::vector<Font> load(const IO::Path& file);
 
     protected:
 
@@ -206,14 +206,14 @@ namespace RS::Graphics::Plane {
         std::vector<std::string> subfamilies(const std::string& family) const;
         Font find(const std::vector<std::string>& families, int style = FontStyle::regular) const;
         Font load(const std::string& family, const std::string& subfamily) const;
-        void search(const std::string& dir, int flags = 0);
+        void search(const IO::Path& dir, int flags = 0);
         void search_system();
         size_t size() const noexcept { return table_.size(); }
 
     private:
 
         struct mapped_type {
-            std::string file;
+            IO::Path file;
             int index;
         };
 

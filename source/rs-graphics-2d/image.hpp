@@ -4,6 +4,8 @@
 #include "rs-graphics-core/colour-space.hpp"
 #include "rs-graphics-core/vector.hpp"
 #include "rs-format/format.hpp"
+#include "rs-format/string.hpp"
+#include "rs-io/path.hpp"
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
@@ -30,12 +32,12 @@ namespace RS::Graphics::Plane {
     class ImageIoError:
     public std::runtime_error {
     public:
-        ImageIoError(const std::string& filename, const std::string& details, bool stbi):
-            std::runtime_error(make_message(filename, details, stbi)), filename_(filename) {}
-        const std::string& filename() const noexcept { return filename_; }
+        ImageIoError(const IO::Path& file, const std::string& details, bool stbi):
+            std::runtime_error(make_message(file, details, stbi)), file_(file) {}
+        IO::Path file() const noexcept { return file_; }
     private:
-        std::string filename_;
-        static std::string make_message(const std::string& filename, const std::string& details, bool stbi);
+        IO::Path file_;
+        static std::string make_message(const IO::Path& file, const std::string& details, bool stbi);
     };
 
     struct ImageInfo {
@@ -48,7 +50,7 @@ namespace RS::Graphics::Plane {
         std::string str() const;
     };
 
-    ImageInfo query_image(const std::string& filename) noexcept;
+    ImageInfo query_image(const IO::Path& file) noexcept;
     inline std::ostream& operator<<(std::ostream& out, const ImageInfo& info) { return out << info.str(); }
 
     template <typename Colour, int Flags = 0>
@@ -63,13 +65,11 @@ namespace RS::Graphics::Plane {
         template <typename T>
         using StbiPtr = std::unique_ptr<T, StbiFree>;
 
-        StbiPtr<uint8_t> load_image_8(const std::string& filename, Point& shape);
-        StbiPtr<uint16_t> load_image_16(const std::string& filename, Point& shape);
-        StbiPtr<float> load_image_hdr(const std::string& filename, Point& shape);
-
-        std::string get_file_format(const std::string& filename);
-        void save_image_8(const Image<Core::Rgba8>& image, const std::string& filename, const std::string& format, int quality);
-        void save_image_hdr(const Image<Core::Rgbaf>& image, const std::string& filename);
+        StbiPtr<uint8_t> load_image_8(const IO::Path& file, Point& shape);
+        StbiPtr<uint16_t> load_image_16(const IO::Path& file, Point& shape);
+        StbiPtr<float> load_image_hdr(const IO::Path& file, Point& shape);
+        void save_image_8(const Image<Core::Rgba8>& image, const IO::Path& file, const std::string& format, int quality);
+        void save_image_hdr(const Image<Core::Rgbaf>& image, const IO::Path& file);
 
     }
 
@@ -178,8 +178,8 @@ namespace RS::Graphics::Plane {
         void clear() noexcept { pixels_.reset(); shape_ = {}; }
         void fill(colour_type c) noexcept { std::fill(pixels_.begin(), pixels_.end(), c); }
 
-        void load(const std::string& filename);
-        void save(const std::string& filename, int quality = 90) const;
+        void load(const IO::Path& file);
+        void save(const IO::Path& file, int quality = 90) const;
 
         iterator locate(Point p) noexcept { return locate(p.x(), p.y()); }
         const_iterator locate(Point p) const noexcept { return locate(p.x(), p.y()); }
@@ -311,21 +311,20 @@ namespace RS::Graphics::Plane {
     }
 
     template <typename T, typename CS, Core::ColourLayout CL, int Flags>
-    void Image<Core::Colour<T, CS, CL>, Flags>::load(const std::string& filename) {
-        using namespace Detail;
+    void Image<Core::Colour<T, CS, CL>, Flags>::load(const IO::Path& file) {
         Point shape;
         if constexpr (std::is_same_v<channel_type, uint8_t>) {
-            auto image_ptr = load_image_8(filename, shape);
+            auto image_ptr = Detail::load_image_8(file, shape);
             Image<Core::Rgba8> image(shape);
             std::memcpy(image.data(), image_ptr.get(), image.bytes());
             convert_image(image, *this);
         } else if constexpr (std::is_same_v<channel_type, uint16_t>) {
-            auto image_ptr = load_image_16(filename, shape);
+            auto image_ptr = Detail::load_image_16(file, shape);
             Image<Core::Rgba16> image(shape);
             std::memcpy(image.data(), image_ptr.get(), image.bytes());
             convert_image(image, *this);
         } else {
-            auto image_ptr = load_image_hdr(filename, shape);
+            auto image_ptr = Detail::load_image_hdr(file, shape);
             Image<Core::Rgbaf> image(shape);
             std::memcpy(image.data(), image_ptr.get(), image.bytes());
             convert_image(image, *this);
@@ -333,16 +332,16 @@ namespace RS::Graphics::Plane {
     }
 
     template <typename T, typename CS, Core::ColourLayout CL, int Flags>
-    void Image<Core::Colour<T, CS, CL>, Flags>::save(const std::string& filename, int quality) const {
-        auto format = Detail::get_file_format(filename);
-        if (format == "hdr" || format == "rgbe") {
+    void Image<Core::Colour<T, CS, CL>, Flags>::save(const IO::Path& file, int quality) const {
+        auto format = Format::ascii_lowercase(file.split_leaf().second);
+        if (format == ".hdr" || format == ".rgbe") {
             Image<Core::Rgbaf> image;
             convert_image(*this, image);
-            Detail::save_image_hdr(image, filename);
+            Detail::save_image_hdr(image, file);
         } else {
             Image<Core::Rgba8> image;
             convert_image(*this, image);
-            Detail::save_image_8(image, filename, format, quality);
+            Detail::save_image_8(image, file, format, quality);
         }
     }
 

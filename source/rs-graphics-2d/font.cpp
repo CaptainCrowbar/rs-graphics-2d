@@ -1,6 +1,7 @@
 #include "rs-graphics-2d/font.hpp"
 #include "rs-format/enum.hpp"
 #include "rs-format/unicode.hpp"
+#include "rs-io/stdio.hpp"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -131,12 +132,12 @@ namespace RS::Graphics::Plane {
             return true;
         }
 
-        size_t get_file_size(Cstdio& io) noexcept {
-            if (! io)
+        size_t get_file_size(IO::Cstdio& io) noexcept {
+            if (! io.is_open())
                 return 0;
-            std::fseek(io, 0, SEEK_END);
-            auto size = size_t(std::ftell(io));
-            std::fseek(io, 0, SEEK_SET);
+            io.seek(0, SEEK_END);
+            auto size = size_t(io.tell());
+            io.seek(0, SEEK_SET);
             return size;
         }
 
@@ -209,19 +210,28 @@ namespace RS::Graphics::Plane {
             return true;
         }
 
-        bool verify_ttf(Cstdio& io, size_t base_offset, size_t file_size) noexcept {
-            if (file_size == npos)
+        template <typename T>
+        T read_be(IO::Cstdio& io) {
+            std::string buf = io.reads(sizeof(T));
+            std::reverse(buf.begin(), buf.end());
+            T t = 0;
+            std::memcpy(&t, buf.data(), buf.size());
+            return t;
+        }
+
+        bool verify_ttf(IO::Cstdio& io, size_t base_offset, size_t file_size) noexcept {
+            if (file_size == IO::npos)
                 file_size = get_file_size(io);
             size_t ttf_size = file_size - base_offset;
             if (ttf_size < 12)
                 return false;
-            std::fseek(io, 4, SEEK_CUR);
+            io.seek(4, SEEK_CUR);
             size_t num_tables = read_be<uint16_t>(io);
             if (16 * num_tables + 12 > ttf_size)
                 return false;
-            std::fseek(io, 6, SEEK_CUR);
+            io.seek(6, SEEK_CUR);
             for (size_t i = 0; i < num_tables; ++i) {
-                std::fseek(io, 8, SEEK_CUR);
+                io.seek(8, SEEK_CUR);
                 size_t offset = read_be<uint32_t>(io);
                 size_t length = read_be<uint32_t>(io);
                 if (offset + length > file_size)
@@ -230,11 +240,11 @@ namespace RS::Graphics::Plane {
             return true;
         }
 
-        bool verify_ttc(Cstdio& io) noexcept {
+        bool verify_ttc(IO::Cstdio& io) noexcept {
             size_t file_size = get_file_size(io);
             if (file_size < 12)
                 return false;
-            std::fseek(io, 8, SEEK_CUR);
+            io.seek(8, SEEK_CUR);
             size_t num_fonts = read_be<uint32_t>(io);
             if (4 * num_fonts + 12 > file_size)
                 return false;
@@ -245,20 +255,20 @@ namespace RS::Graphics::Plane {
                     return false;
             }
             for (size_t ofs: offsets) {
-                std::fseek(io, ofs, SEEK_SET);
+                io.seek(ofs, SEEK_SET);
                 if (! verify_ttf(io, ofs, file_size))
                     return false;
             }
             return true;
         }
 
-        bool verify_font_data(Cstdio& io) noexcept {
+        bool verify_font_data(IO::Cstdio& io) noexcept {
             auto magic = read_be<uint32_t>(io);
-            std::fseek(io, -4, SEEK_CUR);
+            io.seek(-4, SEEK_CUR);
             switch (magic) {
                 case ttf_magic:
                 case otf_magic:
-                    return verify_ttf(io, 0, npos);
+                    return verify_ttf(io, 0, IO::npos);
                 case ttc_magic:
                     return verify_ttc(io);
                 default:
@@ -268,7 +278,7 @@ namespace RS::Graphics::Plane {
 
         #ifdef _WIN32
 
-            std::string get_windows_dir() {
+            IO::Path get_windows_dir() {
                 std::u16string u16dir;
                 UINT size = 100;
                 for (;;) {
@@ -278,21 +288,22 @@ namespace RS::Graphics::Plane {
                         break;
                 }
                 u16dir.resize(size);
-                std::u32string u32dir;
-                std::string u8dir;
-                decode_utf16(u16dir, u32dir);
-                encode_utf8(u32dir, u8dir);
-                if (u8dir.empty())
-                    return "C:\\Windows";
+                IO::Path path;
+                if (u16dir.empty())
+                    path = "C:\\Windows";
                 else
-                    return u8dir;
+                    path = u16dir;
+                return path;
             }
 
         #else
 
-            std::string get_home_dir() {
+            IO::Path get_home_dir() {
                 auto home_env = std::getenv("HOME");
-                return home_env ? home_env : "";
+                IO::Path path;
+                if (home_env != nullptr)
+                    path = home_env;
+                return path;
             }
 
         #endif
@@ -304,25 +315,40 @@ namespace RS::Graphics::Plane {
     struct Font::font_impl:
     FontCoreInfo {};
 
-    Font::Font(const std::string& filename, int index) {
+    Font::Font(const IO::Path& file, int index) {
+
         if (index < 0)
             return;
-        Cstdio io(filename, "rb");
-        if (! io || ! verify_font_data(io))
+
+        IO::Cstdio io;
+        try {
+            io = IO::Cstdio(file, "rb");
+        }
+        catch (const IO::IoError&) {
             return;
-        std::rewind(io);
+        }
+
+        if (! verify_font_data(io))
+            return;
+
+        io.seek(0, SEEK_SET);
         auto content = std::make_shared<std::string>();
-        load_file(io, *content);
+        *content = io.read_all();
         auto data = reinterpret_cast<const unsigned char*>(content->data());
         int num_fonts = stbtt_GetNumberOfFonts(data);
+
         if (index >= num_fonts)
             return;
+
         int offset = stbtt_GetFontOffsetForIndex(data, index);
         auto impl = std::make_shared<font_impl>();
+
         if (! init_font(*impl, data, offset))
             return;
+
         content_ = content;
         font_ = impl;
+
     }
 
     std::string Font::family() const {
@@ -350,19 +376,24 @@ namespace RS::Graphics::Plane {
         return true;
     }
 
-    std::vector<Font> Font::load(const std::string& filename) {
+    std::vector<Font> Font::load(const IO::Path& file) {
 
         std::vector<Font> fonts;
 
-        Cstdio io(filename, "rb");
-        if (! io)
+        IO::Cstdio io;
+        try {
+            io = IO::Cstdio(file, "rb");
+        }
+        catch (const IO::IoError&) {
             return fonts;
+        }
+
         if (! verify_font_data(io))
             return fonts;
 
-        std::fseek(io, 0, SEEK_SET);
+        io.seek(0, SEEK_SET);
         auto content = std::make_shared<std::string>();
-        load_file(io, *content);
+        *content = io.read_all();
         if (content->empty())
             return fonts;
 
@@ -511,7 +542,7 @@ namespace RS::Graphics::Plane {
         }
 
         if (i == length)
-            return npos;
+            return IO::npos;
 
         auto prefix = Format::encode_utf8_string(utext.substr(0, i));
 
@@ -536,15 +567,15 @@ namespace RS::Graphics::Plane {
             while (! para.empty()) {
 
                 size_t fit = text_fit(para, max_pixels);
-                if (fit == npos) {
+                if (fit == IO::npos) {
                     lines.push_back(para);
                     break;
                 }
 
                 size_t cut = para.find_last_of(' ', fit + 1);
-                if (cut == 0 || cut == npos)
+                if (cut == 0 || cut == IO::npos)
                     cut = para.find_first_of(' ', fit + 1);
-                if (cut == npos) {
+                if (cut == IO::npos) {
                     lines.push_back(para);
                     break;
                 }
@@ -746,13 +777,20 @@ namespace RS::Graphics::Plane {
             return Font(j->second.file, j->second.index);
     }
 
-    void FontMap::search(const std::string& dir, int flags) {
-        std::vector<Font> fonts;
-        for (auto& rel_file: list_directory(dir, flags)) {
-            std::string file = merge_paths(dir, rel_file);
-            int index = 0;
-            for (auto& font: Font::load(file))
-                table_[font.family()][font.subfamily()] = {file, index++};
+    void FontMap::search(const IO::Path& dir, int flags) {
+        auto check_file = [this] (const IO::Path& file) {
+            if (file.is_file()) {
+                int index = 0;
+                for (auto& font: Font::load(file))
+                    table_[font.family()][font.subfamily()] = {file, index++};
+            }
+        };
+        if ((flags & IO::Path::recurse)) {
+            for (auto& file: dir.deep_search())
+                check_file(file);
+        } else {
+            for (auto& file: dir.directory())
+                check_file(file);
         }
     }
 
@@ -760,7 +798,7 @@ namespace RS::Graphics::Plane {
 
         #ifdef _WIN32
 
-            search(merge_paths(get_windows_dir(), "Fonts"), ListDir::recursive);
+            search(merge_paths(get_windows_dir(), "Fonts"), IO::Path::recurse);
 
         #else
 
@@ -778,15 +816,15 @@ namespace RS::Graphics::Plane {
                 #endif
             };
 
-            std::string home = get_home_dir();
-            std::string dir;
+            IO::Path home = get_home_dir();
+            IO::Path dir;
 
             for (auto& cdir: system_font_dirs) {
                 if (cdir[0] == '~' && cdir[1] == '/' && ! home.empty())
-                    dir = merge_paths(home, cdir + 2);
+                    dir = home / (cdir + 2);
                 else
                     dir = cdir;
-                search(dir, ListDir::recursive);
+                search(dir, IO::Path::recurse);
             }
 
         #endif

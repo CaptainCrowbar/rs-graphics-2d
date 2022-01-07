@@ -8,12 +8,17 @@
 using namespace RS::Graphics::Core;
 using namespace RS::Graphics::Plane;
 
-void test_rs_graphics_2d_image_io_file_info() {
+namespace {
 
-    static const std::string test_dir = "../source/test/";
-    static const std::string png_file = test_dir + "test-image.png";
-    static const std::string jpg_file = test_dir + "test-image.jpg";
-    static const std::string no_such_file = test_dir + "no-such-file.png";
+    const std::string image_dir = "../source/test/images/";
+    const std::string png_file = image_dir + "test-image.png";
+    const std::string jpg_file = image_dir + "test-image.jpg";
+    const std::string no_such_file = image_dir + "no-such-file.png";
+    const std::string temp_file = "test-image-copy.png";
+
+}
+
+void test_rs_graphics_2d_image_io_file_info() {
 
     ImageInfo info;
     std::string s;
@@ -48,11 +53,6 @@ void test_rs_graphics_2d_image_io_file_info() {
 }
 
 void test_rs_graphics_2d_image_io_load() {
-
-    static const std::string test_dir = "../source/test/";
-    static const std::string png_file = test_dir + "test-image.png";
-    static const std::string jpg_file = test_dir + "test-image.jpg";
-    static const std::string no_such_file = test_dir + "no-such-file.png";
 
     Image<Rgbaf> hdr;
     Image<Rgba8> rgb;
@@ -232,10 +232,6 @@ void test_rs_graphics_2d_image_io_load() {
 }
 
 void test_rs_graphics_2d_image_io_save() {
-
-    static const std::string test_dir = "../source/test/";
-    static const std::string png_file = test_dir + "test-image.png";
-    static const std::string temp_file = "test-image-copy.png";
 
     Image<Rgbaf> hdr1, hdr2;
     Image<Rgba8> rgb1, rgb2;

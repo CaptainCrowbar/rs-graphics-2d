@@ -41,7 +41,7 @@ Font::Font();
 The default constructor creates a null font with no name or glyphs.
 
 ```c++
-explicit Font::Font(const std::string& filename, int index = 0);
+explicit Font::Font(const IO::Path& file, int index = 0);
 ```
 
 Load a font from a file (OTF, TTF, or TTC). The index indicates which font to
@@ -87,7 +87,7 @@ functions will return false if any of the characters being queried is not a
 valid Unicode scalar value.
 
 ```c++
-static std::vector<Font> Font::load(const std::string& filename);
+static std::vector<Font> Font::load(const IO::Path& file);
 ```
 
 Loads all of the available fonts from a TTC file. For OTF and TTF files this
@@ -329,13 +329,8 @@ Searches the given directory for all readable font files. This will do nothing
 if `dir` does not exist, or exists but is not a directory. Searches are
 cumulative; previously loaded fonts are not cleared before a search.
 
-The `flags` argument is a combination of the following bitmask flags:
-
-* `recursive` - Subdirectories will be searched recursively. By default,
-  symlinks to directories are not followed;
-* `symlinks` - Directory symlinks will be followed. This flag has no effect if
-  not combined with `recursive`; symlinks to font files will be opened
-  regardless.
+The `flags` argument can be `IO::Path::recurse` to search subdirectories
+recursively.
 
 ```c++
 void FontMap::search_system();
