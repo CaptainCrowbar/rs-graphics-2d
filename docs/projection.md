@@ -259,7 +259,7 @@ template <typename T> class AzimuthalEquidistantProjection:
 [Azimuthal equidistant projection](https://en.wikipedia.org/wiki/Azimuthal_equidistant_projection),
 also known as the Postel or zenithal equidistant projection.
 
-![Azimuthal equidistant projection](map-azimuthal-equidistant-projection.png) \
+![Azimuthal equidistant projection](images/map-azimuthal-equidistant-projection.png)
 
 ### Gnomonic projection
 
@@ -274,7 +274,7 @@ template <typename T> class GnomonicProjection:
 
 [Gnomonic projection](https://en.wikipedia.org/wiki/Gnomonic_projection).
 
-![Gnomonic projection](map-gnomonic-projection.png) \
+![Gnomonic projection](images/map-gnomonic-projection.png)
 
 ### Lambert azimuthal projection
 
@@ -291,7 +291,7 @@ template <typename T> class LambertAzimuthalProjection:
 [Lambert azimuthal projection](https://en.wikipedia.org/wiki/Lambert_azimuthal_equal-area_projection),
 also known as the azimuthal equal-area projection or Lambert zenithal equal-area projection.
 
-![Lambert azimuthal projection](map-lambert-azimuthal-projection.png) \
+![Lambert azimuthal projection](images/map-lambert-azimuthal-projection.png)
 
 ### Orthographic projection
 
@@ -308,7 +308,7 @@ template <typename T> class OrthographicProjection:
 [Orthographic projection](https://en.wikipedia.org/wiki/Orthographic_projection_in_cartography),
 also known as the orthogonal projection.
 
-![Orthographic projection](map-orthographic-projection.png) \
+![Orthographic projection](images/map-orthographic-projection.png)
 
 ### Stereographic projection
 
@@ -324,7 +324,7 @@ template <typename T> class StereographicProjection:
 
 [Stereographic projection](https://en.wikipedia.org/wiki/Stereographic_projection).
 
-![Stereographic projection](map-stereographic-projection.png) \
+![Stereographic projection](images/map-stereographic-projection.png)
 
 ## Cylindrical projection classes
 
@@ -342,7 +342,7 @@ template <typename T> class CylindricalEquidistantProjection:
 [Cylindrical equidistant projection](https://en.wikipedia.org/wiki/Equirectangular_projection),
 also known as the equirectangular projection, geographic projection, plate carrée projection, or simple cylindrical projection.
 
-![Cylindrical equidistant projection](map-cylindrical-equidistant-projection.png) \
+![Cylindrical equidistant projection](images/map-cylindrical-equidistant-projection.png)
 
 ### Gall-Peters projection
 
@@ -358,7 +358,7 @@ template <typename T> class GallPetersProjection:
 [Gall-Peters projection](https://en.wikipedia.org/wiki/Gall–Peters_projection),
 also known as the Gall orthographic projection.
 
-![Gall-Peters projection](map-gall-peters-projection.png) \
+![Gall-Peters projection](images/map-gall-peters-projection.png)
 
 ### Lambert cylindrical projection
 
@@ -374,7 +374,7 @@ template <typename T> class LambertCylindricalProjection:
 [Lambert cylindrical projection](https://en.wikipedia.org/wiki/Lambert_cylindrical_equal-area_projection),
 also known as the cylindrical equal-area projection.
 
-![Lambert cylindrical projection](map-lambert-cylindrical-projection.png) \
+![Lambert cylindrical projection](images/map-lambert-cylindrical-projection.png)
 
 ### Mercator projection
 
@@ -390,7 +390,7 @@ template <typename T> class MercatorProjection:
 
 [Mercator projection](https://en.wikipedia.org/wiki/Mercator_projection).
 
-![Mercator projection](map-mercator-projection.png) \
+![Mercator projection](images/map-mercator-projection.png)
 
 ## Pseudo-cylindrical projection classes
 
@@ -408,7 +408,7 @@ template <typename T> class Eckert4Projection:
 
 [Eckert IV projection](https://en.wikipedia.org/wiki/Eckert_IV_projection).
 
-![Eckert IV projection](map-eckert-iv-projection.png) \
+![Eckert IV projection](images/map-eckert-iv-projection.png)
 
 ### Mollweide projection
 
@@ -425,7 +425,7 @@ template <typename T> class MollweideProjection:
 [Mollweide projection](https://en.wikipedia.org/wiki/Mollweide_projection),
 also known as the Babinet projection, elliptical equal-area projection, or homolographic projection.
 
-![Mollweide projection](map-mollweide-projection.png) \
+![Mollweide projection](images/map-mollweide-projection.png)
 
 ### Sinusoidal projection
 
@@ -442,7 +442,7 @@ template <typename T> class SinusoidalProjection:
 [Sinusoidal projection](https://en.wikipedia.org/wiki/Sinusoidal_projection),
 also known as the Mercator equal-area projection or Sanson–Flamsteed projection.
 
-![Sinusoidal projection](map-sinusoidal-projection.png) \
+![Sinusoidal projection](images/map-sinusoidal-projection.png)
 
 ## Interrupted projection classes
 
@@ -470,12 +470,12 @@ for both hemispheres or for each hemisphere separately.
 
 ### Interrupted Eckert IV projection
 
-![Interrupted Eckert IV projection](map-interrupted-eckert-iv-projection.png) \
+![Interrupted Eckert IV projection](images/map-interrupted-eckert-iv-projection.png)
 
 ### Interrupted Mollweide projection
 
-![Interrupted Mollweide projection](map-interrupted-mollweide-projection.png) \
+![Interrupted Mollweide projection](images/map-interrupted-mollweide-projection.png)
 
 ### Interrupted sinusoidal projection
 
-![Interrupted sinusoidal projection](map-interrupted-sinusoidal-projection.png) \
+![Interrupted sinusoidal projection](images/map-interrupted-sinusoidal-projection.png)
