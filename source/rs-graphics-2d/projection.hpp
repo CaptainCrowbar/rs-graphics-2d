@@ -5,6 +5,7 @@
 #include "rs-graphics-core/root-finding.hpp"
 #include "rs-graphics-core/transform.hpp"
 #include "rs-graphics-core/vector.hpp"
+#include "rs-tl/algorithm.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
@@ -896,9 +897,8 @@ namespace RS::Graphics::Plane {
             coord_list inter(begin(*ptrs[i]), end(*ptrs[i]));
             for (auto& t: inter)
                 t = Core::symmetric_remainder(t, 2 * Core::pi<T>);
-            std::sort(inter.begin(), inter.end());
-            inter.erase(std::unique(inter.begin(), inter.end()), inter.end());
-            inter.erase(std::remove_if(inter.begin(), inter.end(), [] (T t) { return t <= - Core::pi<T> || t >= Core::pi<T>; }), inter.end());
+            TL::sort_unique_in(inter);
+            TL::remove_in_if(inter, [] (T t) { return t <= - Core::pi<T> || t >= Core::pi<T>; });
             inter.insert(inter.begin(), - Core::pi<T>);
             inter.push_back(Core::pi<T>);
             auto second = std::next(inter.begin());

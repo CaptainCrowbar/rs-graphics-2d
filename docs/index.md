@@ -23,6 +23,7 @@ Other libraries required:
 * [My core graphics library](https://github.com/CaptainCrowbar/rs-graphics-core)
 * [My formatting library](https://github.com/CaptainCrowbar/rs-format)
 * [My I/O library](https://github.com/CaptainCrowbar/rs-io)
+* [My template library](https://github.com/CaptainCrowbar/rs-tl)
 * [My unit test library](https://github.com/CaptainCrowbar/rs-unit-test)
 
 ## Index
