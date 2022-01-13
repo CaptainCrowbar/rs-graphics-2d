@@ -3,6 +3,7 @@
 #include "rs-graphics-core/colour.hpp"
 #include "rs-graphics-core/vector.hpp"
 #include "rs-format/string.hpp"
+#include "rs-tl/thread.hpp"
 #include "rs-unit-test.hpp"
 #include <algorithm>
 #include <cmath>
@@ -10,13 +11,13 @@
 #include <iostream>
 #include <memory>
 #include <string>
-#include <thread>
 #include <vector>
 
 using namespace RS::Format;
 using namespace RS::Graphics::Core;
 using namespace RS::Graphics::Core::Literals;
 using namespace RS::Graphics::Plane;
+using namespace RS::TL;
 
 namespace {
 
@@ -597,7 +598,7 @@ namespace {
 
 void test_rs_graphics_2d_projection_sample_maps() {
 
-    std::vector<std::thread> threads;
+    std::vector<Thread> threads;
 
     threads.emplace_back([] { make_map(std::make_shared<AzimuthalEquidistantProjection<double>>()); });
     threads.emplace_back([] { make_map(std::make_shared<GnomonicProjection<double>>()); });
@@ -614,8 +615,5 @@ void test_rs_graphics_2d_projection_sample_maps() {
     threads.emplace_back([] { make_map(std::make_shared<InterruptedProjection<Eckert4Projection<double>>>()); });
     threads.emplace_back([] { make_map(std::make_shared<InterruptedProjection<MollweideProjection<double>>>()); });
     threads.emplace_back([] { make_map(std::make_shared<InterruptedProjection<SinusoidalProjection<double>>>()); });
-
-    for (auto& t: threads)
-        t.join();
 
 }
