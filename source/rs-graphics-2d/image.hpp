@@ -188,7 +188,7 @@ namespace RS::Graphics::Plane {
 
         template <typename U = T>
         Image<colour_type, Flags | ImageFlags::premultiplied>
-        multiply_alpha(std::enable_if<Core::Detail::SfinaeBoolean<U, colour_type::can_premultiply
+        multiply_alpha(std::enable_if<Core::Detail::SfinaeTrue<U, colour_type::can_premultiply
                 && ! is_premultiplied>::value>* = nullptr) const {
             Image<colour_type, Flags | ImageFlags::premultiplied> result(shape());
             auto out = result.begin();
@@ -199,7 +199,7 @@ namespace RS::Graphics::Plane {
 
         template <typename U = T>
         Image<colour_type, Flags - ImageFlags::premultiplied>
-        unmultiply_alpha(std::enable_if<Core::Detail::SfinaeBoolean<U, colour_type::can_premultiply
+        unmultiply_alpha(std::enable_if<Core::Detail::SfinaeTrue<U, colour_type::can_premultiply
                 && is_premultiplied>::value>* = nullptr) const {
             Image<colour_type, Flags - ImageFlags::premultiplied> result(shape());
             auto out = result.begin();
