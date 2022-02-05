@@ -128,7 +128,7 @@ namespace RS::Graphics::Plane {
         template <typename C, int F>
         void ScaledFont::render(Image<C, F>& image, Point& offset, const std::string& text, int line_shift, C text_colour, C background) const {
 
-            static_assert(C::colour_space::is_linear);
+            static_assert(Core::cs_is_linear<typename C::colour_space>);
             static_assert(C::has_alpha);
 
             offset = Point::null();
@@ -155,7 +155,7 @@ namespace RS::Graphics::Plane {
         template <typename C, int F>
         void ScaledFont::render_to(Image<C, F>& image, Point ref_point, const std::string& text, int line_shift, C text_colour) const {
 
-            static_assert(C::colour_space::is_linear);
+            static_assert(Core::cs_is_linear<typename C::colour_space>);
             static_assert(C::has_alpha);
 
             if (! font_)
