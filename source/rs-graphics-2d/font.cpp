@@ -171,7 +171,7 @@ namespace RS::Graphics::Plane {
                         ok = decode_utf16_be(raw_name, utf32_name);
                     if (! ok)
                         decode_latin_1(raw_name, utf32_name);
-                    return Format::encode_utf8_string(utf32_name);
+                    return Format::to_utf8(utf32_name);
                 }
             }
             return {};
@@ -544,7 +544,7 @@ namespace RS::Graphics::Plane {
         if (i == length)
             return IO::npos;
 
-        auto prefix = Format::encode_utf8_string(utext.substr(0, i));
+        auto prefix = Format::to_utf8(utext.substr(0, i));
 
         return prefix.size();
 
