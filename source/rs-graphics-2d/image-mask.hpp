@@ -4,6 +4,7 @@
 
 #include "rs-graphics-2d/image.hpp"
 #include "rs-graphics-core/colour.hpp"
+#include <cstring>
 #include <limits>
 #include <memory>
 #include <type_traits>
@@ -39,7 +40,7 @@ namespace RS::Graphics::Plane::Detail {
     private:
 
         Point shape_;
-        std::shared_ptr<T> ptr_;
+        std::shared_ptr<T[]> ptr_;
 
     };
 
@@ -49,7 +50,7 @@ namespace RS::Graphics::Plane::Detail {
         template <typename T>
         ImageMask<T>::ImageMask(Point shape) noexcept:
         shape_(shape),
-        ptr_(new T[area()], std::default_delete<T[]>()) {
+        ptr_(new T[area()]) {
             std::memset(ptr_.get(), 0, area() * sizeof(T));
         }
 
