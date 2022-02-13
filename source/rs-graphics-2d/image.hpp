@@ -144,6 +144,7 @@ namespace RS::Graphics::Plane {
         static constexpr bool is_bottom_up = (Flags & ImageFlags::bottom_up) != 0;
         static constexpr bool is_top_down = ! is_bottom_up;
         static constexpr bool is_hdr = colour_type::is_hdr;
+        static constexpr bool is_linear = colour_type::is_linear;
         static constexpr bool is_premultiplied = (Flags & ImageFlags::premultiplied) != 0;
 
         static_assert(colour_type::can_premultiply || ! is_premultiplied);
@@ -175,7 +176,7 @@ namespace RS::Graphics::Plane {
         iterator top_right() noexcept { return locate(width() - 1, is_top_down ? 0 : height() - 1); }
         const_iterator top_right() const noexcept { return locate(width() - 1, is_top_down ? 0 : height() - 1); }
 
-        void clear() noexcept { pixels_.reset(); shape_ = {}; }
+        void clear() noexcept { pixels_.clear(); shape_ = {}; }
         void fill(colour_type c) noexcept { std::fill(pixels_.begin(), pixels_.end(), c); }
 
         void load(const IO::Path& file);

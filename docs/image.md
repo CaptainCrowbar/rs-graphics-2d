@@ -124,6 +124,7 @@ static constexpr int channels = Colour::channels;
 static constexpr Core::ColourLayout colour_layout = CL;
 static constexpr bool has_alpha = Colour::has_alpha;
 static constexpr bool is_hdr = Colour::is_hdr;
+static constexpr bool is_linear = Colour::is_linear;
 ```
 
 Properties of the pixel type.

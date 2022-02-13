@@ -105,39 +105,33 @@ namespace RS::Graphics::Plane {
 
     };
 
-        // TODO - check for premultiplied alpha
-
         template <typename C, int F>
         void ScaledFont::render(Image<C, F>& image, Point& offset, const std::string& text, int line_shift, C text_colour, C background) const {
 
-            static_assert(Core::cs_is_linear<typename C::colour_space>);
+            static_assert(C::is_linear);
             static_assert(C::has_alpha);
 
-            offset = Point::null();
             if (! font_)
                 throw std::invalid_argument("No font");
+
+            image.clear();
+            offset = Point::null();
+
             if (text.empty())
                 return;
 
             auto utext = Format::decode_string(text);
             auto mask = render_text_mask(utext, line_shift, offset);
-            if (mask.empty())
-                return;
 
-            image.reset(mask.shape(), background);
-            auto bptr = mask.begin();
-
-            for (auto& pixel: image) {
-                text_colour.alpha() = byte_scale * float(*bptr++);
-                pixel = alpha_blend(text_colour, background);
-            }
+            if (! mask.empty())
+                mask.make_image(image, text_colour, background);
 
         }
 
         template <typename C, int F>
         void ScaledFont::render_to(Image<C, F>& image, Point ref_point, const std::string& text, int line_shift, C text_colour) const {
 
-            static_assert(Core::cs_is_linear<typename C::colour_space>);
+            static_assert(C::is_linear);
             static_assert(C::has_alpha);
 
             if (! font_)
