@@ -33,6 +33,10 @@
     #include <windows.h>
 #endif
 
+using namespace RS::Format;
+using namespace RS::Graphics::Core;
+using namespace RS::IO;
+
 namespace RS::Graphics::Plane {
 
     namespace {
@@ -108,7 +112,9 @@ namespace RS::Graphics::Plane {
         }
 
         bool decode_mac_roman(const std::string& roman, std::u32string& utf32) {
+
             static constexpr std::array<char32_t, 256> code_table = {{
+
                 0x0000, 0x0001, 0x0002, 0x0003, 0x0004, 0x0005, 0x0006, 0x0007, 0x0008, 0x0009, 0x000A, 0x000B, 0x000C, 0x000D, 0x000E, 0x000F,
                 0x0010, 0x2318, 0x2713, 0x2666, 0xF8FF, 0x0015, 0x0016, 0x0017, 0x0018, 0x0019, 0x001A, 0x001B, 0x001C, 0x001D, 0x001E, 0x001F,
                 0x0020, 0x0021, 0x0022, 0x0023, 0x0024, 0x0025, 0x0026, 0x0027, 0x0028, 0x0029, 0x002A, 0x002B, 0x002C, 0x002D, 0x002E, 0x002F,
@@ -125,14 +131,18 @@ namespace RS::Graphics::Plane {
                 0x2013, 0x2014, 0x201C, 0x201D, 0x2018, 0x2019, 0x00F7, 0x25CA, 0x00FF, 0x0178, 0x2044, 0x20AC, 0x2039, 0x203A, 0xFB01, 0xFB02,
                 0x2021, 0x00B7, 0x201A, 0x201E, 0x2030, 0x00C2, 0x00CA, 0x00C1, 0x00CB, 0x00C8, 0x00CD, 0x00CE, 0x00CF, 0x00CC, 0x00D3, 0x00D4,
                 0xF8FF, 0x00D2, 0x00DA, 0x00DB, 0x00D9, 0x0131, 0x02C6, 0x02DC, 0x00AF, 0x02D8, 0x02D9, 0x02DA, 0x00B8, 0x02DD, 0x02DB, 0x02C7,
+
             }};
+
             std::u32string out(roman.size(), '\0');
             std::transform(roman.begin(), roman.end(), out.begin(), [] (char c) { return code_table[uint8_t(c)]; });
             utf32 = std::move(out);
+
             return true;
+
         }
 
-        size_t get_file_size(IO::Cstdio& io) noexcept {
+        size_t get_file_size(Cstdio& io) noexcept {
             if (! io.is_open())
                 return 0;
             io.seek(0, SEEK_END);
@@ -149,7 +159,7 @@ namespace RS::Graphics::Plane {
             for (auto& c: utf16)
                 c = (c >> 8) + (c << 8);
             try {
-                utf32 = Format::decode_string(utf16);
+                utf32 = decode_string(utf16);
                 return true;
             }
             catch (const std::invalid_argument&) {
@@ -158,27 +168,41 @@ namespace RS::Graphics::Plane {
         }
 
         std::string get_font_name(const FontCoreInfo& font, FontNameId id, const std::vector<FontNameParams>& params) {
+
             int len = 0;
+
             for (auto& item: params) {
+
                 auto cptr = stbtt_GetFontNameString(&font.info, &len, item.platform, item.encoding, item.language, int(id));
+
                 if (cptr && len) {
+
                     std::string raw_name(cptr, len);
                     std::u32string utf32_name;
                     bool ok = false;
+
                     if (item.platform == STBTT_PLATFORM_ID_MAC)
                         ok = decode_mac_roman(raw_name, utf32_name);
                     else if (raw_name.size() % 2 == 0)
                         ok = decode_utf16_be(raw_name, utf32_name);
+
                     if (! ok)
                         decode_latin_1(raw_name, utf32_name);
-                    return Format::to_utf8(utf32_name);
+
+                    return to_utf8(utf32_name);
+
                 }
+
             }
+
             return {};
+
         }
 
         void init_font_names(FontCoreInfo& font) {
+
             static const std::vector<FontNameParams> params = {
+
                 { STBTT_PLATFORM_ID_UNICODE,    STBTT_UNICODE_EID_UNICODE_1_0,       0                                     },
                 { STBTT_PLATFORM_ID_UNICODE,    STBTT_UNICODE_EID_UNICODE_1_1,       0                                     },
                 { STBTT_PLATFORM_ID_UNICODE,    STBTT_UNICODE_EID_ISO_10646,         0                                     },
@@ -189,10 +213,13 @@ namespace RS::Graphics::Plane {
                 { STBTT_PLATFORM_ID_MICROSOFT,  STBTT_MS_EID_UNICODE_BMP,            int(MicrosoftLanguageId::english_us)  },
                 { STBTT_PLATFORM_ID_MICROSOFT,  STBTT_MS_EID_UNICODE_BMP,            int(MicrosoftLanguageId::english_uk)  },
                 { STBTT_PLATFORM_ID_MAC,        STBTT_MAC_EID_ROMAN,                 STBTT_MAC_LANG_ENGLISH                },
+
             };
+
             font.family = get_font_name(font, FontNameId::family, params);
             font.subfamily = get_font_name(font, FontNameId::subfamily, params);
             font.name = get_font_name(font, FontNameId::full_name, params);
+
         }
 
         void init_font_metrics(FontCoreInfo& font) {
@@ -211,7 +238,7 @@ namespace RS::Graphics::Plane {
         }
 
         template <typename T>
-        T read_be(IO::Cstdio& io) {
+        T read_be(Cstdio& io) {
             std::string buf = io.reads(sizeof(T));
             std::reverse(buf.begin(), buf.end());
             T t = 0;
@@ -219,7 +246,7 @@ namespace RS::Graphics::Plane {
             return t;
         }
 
-        bool verify_ttf(IO::Cstdio& io, size_t base_offset, size_t file_size) noexcept {
+        bool verify_ttf(Cstdio& io, size_t base_offset, size_t file_size) noexcept {
             if (file_size == IO::npos)
                 file_size = get_file_size(io);
             size_t ttf_size = file_size - base_offset;
@@ -240,7 +267,7 @@ namespace RS::Graphics::Plane {
             return true;
         }
 
-        bool verify_ttc(IO::Cstdio& io) noexcept {
+        bool verify_ttc(Cstdio& io) noexcept {
             size_t file_size = get_file_size(io);
             if (file_size < 12)
                 return false;
@@ -262,7 +289,7 @@ namespace RS::Graphics::Plane {
             return true;
         }
 
-        bool verify_font_data(IO::Cstdio& io) noexcept {
+        bool verify_font_data(Cstdio& io) noexcept {
             auto magic = read_be<uint32_t>(io);
             io.seek(-4, SEEK_CUR);
             switch (magic) {
@@ -278,7 +305,7 @@ namespace RS::Graphics::Plane {
 
         #ifdef _WIN32
 
-            IO::Path get_windows_dir() {
+            Path get_windows_dir() {
                 std::u16string u16dir;
                 UINT size = 100;
                 for (;;) {
@@ -288,7 +315,7 @@ namespace RS::Graphics::Plane {
                         break;
                 }
                 u16dir.resize(size);
-                IO::Path path;
+                Path path;
                 if (u16dir.empty())
                     path = "C:\\Windows";
                 else
@@ -298,9 +325,9 @@ namespace RS::Graphics::Plane {
 
         #else
 
-            IO::Path get_home_dir() {
+            Path get_home_dir() {
                 auto home_env = std::getenv("HOME");
-                IO::Path path;
+                Path path;
                 if (home_env != nullptr)
                     path = home_env;
                 return path;
@@ -315,16 +342,16 @@ namespace RS::Graphics::Plane {
     struct Font::font_impl:
     FontCoreInfo {};
 
-    Font::Font(const IO::Path& file, int index) {
+    Font::Font(const Path& file, int index) {
 
         if (index < 0)
             return;
 
-        IO::Cstdio io;
+        Cstdio io;
         try {
-            io = IO::Cstdio(file, "rb");
+            io = Cstdio(file, "rb");
         }
-        catch (const IO::IoError&) {
+        catch (const IoError&) {
             return;
         }
 
@@ -376,15 +403,15 @@ namespace RS::Graphics::Plane {
         return true;
     }
 
-    std::vector<Font> Font::load(const IO::Path& file) {
+    std::vector<Font> Font::load(const Path& file) {
 
         std::vector<Font> fonts;
 
-        IO::Cstdio io;
+        Cstdio io;
         try {
-            io = IO::Cstdio(file, "rb");
+            io = Cstdio(file, "rb");
         }
-        catch (const IO::IoError&) {
+        catch (const IoError&) {
             return fonts;
         }
 
@@ -416,7 +443,7 @@ namespace RS::Graphics::Plane {
     }
 
     bool Font::has_glyph_unchecked(char32_t c) const noexcept {
-        return Format::is_unicode(c) && stbtt_FindGlyphIndex(&font_->info, int(c)) > 0;
+        return is_unicode(c) && stbtt_FindGlyphIndex(&font_->info, int(c)) > 0;
     }
 
     // ScaledFont class
@@ -426,7 +453,7 @@ namespace RS::Graphics::Plane {
         int descent_pixels = 0;
         int line_gap_pixels = 0;
         Point pixels_per_em = Point::null();
-        Core::Float2 pixels_per_unit = Core::Float2::null();
+        Float2 pixels_per_unit = Float2::null();
     };
 
     ScaledFont::ScaledFont(const Font& font, Point scale) noexcept:
@@ -434,7 +461,7 @@ namespace RS::Graphics::Plane {
     scaled_(std::make_shared<scaled_impl>()) {
         if (font_) {
             scaled_->pixels_per_em = scale;
-            scaled_->pixels_per_unit = Core::Float2(scale) / font_->units_per_em;
+            scaled_->pixels_per_unit = Float2(scale) / font_->units_per_em;
             scaled_->ascent_pixels = scale_y(font_->ascent);
             scaled_->descent_pixels = scale_y(font_->descent);
             scaled_->line_gap_pixels = scale_y(font_->line_gap);
@@ -457,12 +484,12 @@ namespace RS::Graphics::Plane {
         return scaled_ ? scaled_->line_gap_pixels : 0;
     }
 
-    Core::Box_i2 ScaledFont::text_box(const std::string& text, int line_shift) const {
+    Box_i2 ScaledFont::text_box(const std::string& text, int line_shift) const {
 
         if (! font_ || text.empty())
             return {};
 
-        auto utext = Format::decode_string(text);
+        auto utext = decode_string(text);
         int x = 0, y = 0;
         int x0 = 0, x1 = 0, y0 = 0, y1 = 0;
         int min_x = 0, min_y = 0, max_x = 0, max_y = 0;
@@ -496,7 +523,7 @@ namespace RS::Graphics::Plane {
 
         }
 
-        Core::Box_i2 box = {{min_x, min_y}, {max_x - min_x, max_y - min_y}};
+        Box_i2 box = {{min_x, min_y}, {max_x - min_x, max_y - min_y}};
 
         return box;
 
@@ -509,7 +536,7 @@ namespace RS::Graphics::Plane {
         if (text.empty())
             return 0;
 
-        auto utext = Format::decode_string(text);
+        auto utext = decode_string(text);
         int x0 = 0, y0 = 0, x1 = 0, y1 = 0;
         int x = 0, min_x = 0, max_x = 0;
         size_t length = utext.size();
@@ -544,7 +571,7 @@ namespace RS::Graphics::Plane {
         if (i == length)
             return IO::npos;
 
-        auto prefix = Format::to_utf8(utext.substr(0, i));
+        auto prefix = to_utf8(utext.substr(0, i));
 
         return prefix.size();
 
@@ -558,7 +585,7 @@ namespace RS::Graphics::Plane {
             throw std::invalid_argument("No font");
 
         std::vector<std::string> lines;
-        auto paras = Format::split(text_in, "\n");
+        auto paras = split(text_in, "\n");
         if (paras.empty())
             return 0;
 
@@ -587,7 +614,7 @@ namespace RS::Graphics::Plane {
 
         }
 
-        text_out = Format::join(lines, "\n");
+        text_out = join(lines, "\n");
 
         return lines.size();
 
@@ -672,7 +699,7 @@ namespace RS::Graphics::Plane {
         return int(std::lround(scaled_->pixels_per_unit.y() * float(y)));
     }
 
-    Core::Box_i2 ScaledFont::scale_box(Core::Box_i2 box) const noexcept {
+    Box_i2 ScaledFont::scale_box(Box_i2 box) const noexcept {
         int x0 = int(std::floor(scaled_->pixels_per_unit.x() * float(box.base().x())));
         int y0 = int(std::floor(scaled_->pixels_per_unit.y() * float(box.base().y())));
         int x1 = int(std::ceil(scaled_->pixels_per_unit.x() * float(box.apex().x())));
@@ -777,15 +804,15 @@ namespace RS::Graphics::Plane {
             return Font(j->second.file, j->second.index);
     }
 
-    void FontMap::search(const IO::Path& dir, int flags) {
-        auto check_file = [this] (const IO::Path& file) {
+    void FontMap::search(const Path& dir, int flags) {
+        auto check_file = [this] (const Path& file) {
             if (file.is_file()) {
                 int index = 0;
                 for (auto& font: Font::load(file))
                     table_[font.family()][font.subfamily()] = {file, index++};
             }
         };
-        if ((flags & IO::Path::recurse)) {
+        if ((flags & Path::recurse)) {
             for (auto& file: dir.deep_search())
                 check_file(file);
         } else {
@@ -798,7 +825,7 @@ namespace RS::Graphics::Plane {
 
         #ifdef _WIN32
 
-            search(merge_paths(get_windows_dir(), "Fonts"), IO::Path::recurse);
+            search(merge_paths(get_windows_dir(), "Fonts"), Path::recurse);
 
         #else
 
@@ -816,15 +843,15 @@ namespace RS::Graphics::Plane {
                 #endif
             };
 
-            IO::Path home = get_home_dir();
-            IO::Path dir;
+            Path home = get_home_dir();
+            Path dir;
 
             for (auto& cdir: system_font_dirs) {
                 if (cdir[0] == '~' && cdir[1] == '/' && ! home.empty())
                     dir = home / (cdir + 2);
                 else
                     dir = cdir;
-                search(dir, IO::Path::recurse);
+                search(dir, Path::recurse);
             }
 
         #endif
