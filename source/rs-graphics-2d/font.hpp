@@ -1,6 +1,7 @@
 #pragma once
 
 #include "rs-graphics-2d/image.hpp"
+#include "rs-graphics-2d/image-mask.hpp"
 #include "rs-graphics-core/colour.hpp"
 #include "rs-graphics-core/geometry.hpp"
 #include "rs-graphics-core/maths.hpp"
@@ -92,36 +93,17 @@ namespace RS::Graphics::Plane {
 
         static constexpr float byte_scale = 1.0f / 255.0f;
 
-        class bitmap_ref;
         struct scaled_impl;
 
         std::shared_ptr<scaled_impl> scaled_;
 
-        bitmap_ref render_glyph_bitmap(char32_t c, Point& offset) const;
-        bitmap_ref render_text_bitmap(const std::u32string& utext, int line_shift, Point& offset) const;
+        Detail::ByteMask render_glyph_mask(char32_t c, Point& offset) const;
+        Detail::ByteMask render_text_mask(const std::u32string& utext, int line_shift, Point& offset) const;
         int scale_x(int x) const noexcept;
         int scale_y(int y) const noexcept;
         Core::Box_i2 scale_box(Core::Box_i2 box) const noexcept;
 
     };
-
-        class ScaledFont::bitmap_ref {
-        public:
-            bitmap_ref() = default;
-            explicit bitmap_ref(Point shape, unsigned char* ptr = nullptr) noexcept;
-            unsigned char* begin() noexcept { return ptr_.get(); }
-            const unsigned char* begin() const noexcept { return ptr_.get(); }
-            unsigned char* end() noexcept { return ptr_.get() + area(); }
-            const unsigned char* end() const noexcept { return ptr_.get() + area(); }
-            unsigned char& operator[](Point pos) noexcept { return ptr_.get()[size_t(shape_.x()) * size_t(pos.y()) + size_t(pos.x())]; }
-            const unsigned char& operator[](Point pos) const noexcept { return ptr_.get()[size_t(shape_.x()) * size_t(pos.y()) + size_t(pos.x())]; }
-            size_t area() const noexcept { return size_t(shape_.x()) * size_t(shape_.y()); }
-            bool empty() const noexcept { return ! ptr_ || shape_.x() <= 0 || shape_.y() <= 0; }
-            Point shape() const noexcept { return shape_; }
-        private:
-            std::shared_ptr<unsigned char> ptr_;
-            Point shape_;
-        };
 
         // TODO - check for premultiplied alpha
 
@@ -138,12 +120,12 @@ namespace RS::Graphics::Plane {
                 return;
 
             auto utext = Format::decode_string(text);
-            auto bitmap = render_text_bitmap(utext, line_shift, offset);
-            if (bitmap.empty())
+            auto mask = render_text_mask(utext, line_shift, offset);
+            if (mask.empty())
                 return;
 
-            image.reset(bitmap.shape(), background);
-            auto bptr = bitmap.begin();
+            image.reset(mask.shape(), background);
+            auto bptr = mask.begin();
 
             for (auto& pixel: image) {
                 text_colour.alpha() = byte_scale * float(*bptr++);
@@ -165,29 +147,29 @@ namespace RS::Graphics::Plane {
 
             auto utext = Format::decode_string(text);
             Point offset;
-            auto bitmap = render_text_bitmap(utext, line_shift, offset);
-            if (bitmap.empty())
+            auto mask = render_text_mask(utext, line_shift, offset);
+            if (mask.empty())
                 return;
 
-            // i_ prefix = image coordinates, b_ prefix = bitmap coordinates
-            // ic_, bc_ prefix = clipped to image bounds
+            // i prefix = image coordinates, m prefix = mask coordinates
+            // ic, mc prefix = clipped to image bounds
 
-            Point i_base = ref_point + offset;       // Top left of bitmap
-            Point i_apex = i_base + bitmap.shape();  // Bottom right of bitmap
+            Point i_base = ref_point + offset;     // Top left of mask
+            Point i_apex = i_base + mask.shape();  // Bottom right of mask
             Point ic_base = maxv(i_base, Point::null());
             Point ic_apex = minv(i_apex, image.shape());
 
             if (ic_base.x() >= ic_apex.x() || ic_base.y() >= ic_apex.y())
                 return;
 
-            Point bc_base = ic_base - i_base;
+            Point mc_base = ic_base - i_base;
             int width = ic_apex.x() - ic_base.x();
 
-            for (int iy = ic_base.y(), by = bc_base.y(); iy < ic_apex.y(); ++iy, ++by) {
+            for (int iy = ic_base.y(), my = mc_base.y(); iy < ic_apex.y(); ++iy, ++my) {
                 auto i_iter = image.locate({ic_base.x(), iy});
-                auto b_iter = &bitmap[{bc_base.x(), by}];
-                for (int x = 0; x < width; ++x, ++i_iter, ++b_iter) {
-                    text_colour.alpha() = byte_scale * float(*b_iter);
+                auto m_iter = &mask[{mc_base.x(), my}];
+                for (int x = 0; x < width; ++x, ++i_iter, ++m_iter) {
+                    text_colour.alpha() = byte_scale * float(*m_iter);
                     *i_iter = alpha_blend(text_colour, *i_iter);
                 }
             }

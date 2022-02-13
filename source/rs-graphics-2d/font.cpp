@@ -142,6 +142,11 @@ namespace RS::Graphics::Plane {
 
         }
 
+        void free_stb_bitmap(unsigned char* ptr) noexcept {
+            if (ptr != nullptr)
+                stbtt_FreeBitmap(ptr, nullptr);
+        }
+
         size_t get_file_size(Cstdio& io) noexcept {
             if (! io.is_open())
                 return 0;
@@ -620,23 +625,26 @@ namespace RS::Graphics::Plane {
 
     }
 
-    ScaledFont::bitmap_ref ScaledFont::render_glyph_bitmap(char32_t c, Point& offset) const {
+    Detail::ByteMask ScaledFont::render_glyph_mask(char32_t c, Point& offset) const {
+        using namespace Detail;
         offset = Point::null();
         int width, height, xoff, yoff;
         auto bitmap_ptr = stbtt_GetCodepointBitmap(&font_->info, scaled_->pixels_per_unit.x(), scaled_->pixels_per_unit.y(),
             int(c), &width, &height, &xoff, &yoff);
         if (! bitmap_ptr)
             return {};
-        bitmap_ref bitmap({width, height}, bitmap_ptr);
+        ByteMask mask({width, height}, bitmap_ptr, free_stb_bitmap);
         offset = {xoff, yoff};
-        return bitmap;
+        return mask;
     }
 
-    ScaledFont::bitmap_ref ScaledFont::render_text_bitmap(const std::u32string& utext, int line_shift, Point& offset) const {
+    Detail::ByteMask ScaledFont::render_text_mask(const std::u32string& utext, int line_shift, Point& offset) const {
+
+        using namespace Detail;
 
         size_t length = utext.size();
-        std::vector<bitmap_ref> glyph_bitmaps(length);
-        std::vector<Point> glyph_offsets(length); // Top left of glyph bitmap relative to initial reference point
+        std::vector<ByteMask> glyph_masks(length);
+        std::vector<Point> glyph_offsets(length); // Top left of glyph relative to initial reference point
         int line_delta = line_offset() + line_shift;
         int min_x = 0, max_x = 0, min_y = 0, max_y = 0;
         Point ref_point = Point::null();
@@ -650,12 +658,12 @@ namespace RS::Graphics::Plane {
 
             } else {
 
-                glyph_bitmaps[i] = render_glyph_bitmap(utext[i], glyph_offsets[i]);
+                glyph_masks[i] = render_glyph_mask(utext[i], glyph_offsets[i]);
                 glyph_offsets[i] += ref_point;
                 min_x = std::min(min_x, glyph_offsets[i].x());
                 min_y = std::min(min_y, glyph_offsets[i].y());
-                max_x = std::max(max_x, glyph_offsets[i].x() + glyph_bitmaps[i].shape().x());
-                max_y = std::max(max_y, glyph_offsets[i].y() + glyph_bitmaps[i].shape().y());
+                max_x = std::max(max_x, glyph_offsets[i].x() + glyph_masks[i].shape().x());
+                max_y = std::max(max_y, glyph_offsets[i].y() + glyph_masks[i].shape().y());
                 int advance, left_bearing;
                 stbtt_GetCodepointHMetrics(&font_->info, int(utext[i]), &advance, &left_bearing);
                 ref_point.x() += scale_x(advance);
@@ -668,26 +676,26 @@ namespace RS::Graphics::Plane {
 
         offset = {min_x, min_y};
         Point text_shape = Point{max_x, max_y} - offset;
-        bitmap_ref text_bitmap(text_shape);
+        ByteMask text_mask(text_shape);
 
         for (size_t i = 0; i < length; ++i) {
 
-            if (glyph_bitmaps[i].empty())
+            if (glyph_masks[i].empty())
                 continue;
 
             auto glyph_offset = glyph_offsets[i] - offset;
-            Point shape = glyph_bitmaps[i].shape();
+            Point shape = glyph_masks[i].shape();
 
             for (int glyph_y = 0, text_y = glyph_offset.y(); glyph_y < shape.y(); ++glyph_y, ++text_y) {
-                auto glyph_ptr = &glyph_bitmaps[i][{0, glyph_y}];
-                auto text_ptr = &text_bitmap[{glyph_offset.x(), text_y}];
+                auto glyph_ptr = &glyph_masks[i][{0, glyph_y}];
+                auto text_ptr = &text_mask[{glyph_offset.x(), text_y}];
                 for (int x = 0; x < shape.x(); ++x, ++text_ptr, ++glyph_ptr)
                     *text_ptr = std::max(*text_ptr, *glyph_ptr);
             }
 
         }
 
-        return text_bitmap;
+        return text_mask;
 
     }
 
@@ -705,17 +713,6 @@ namespace RS::Graphics::Plane {
         int x1 = int(std::ceil(scaled_->pixels_per_unit.x() * float(box.apex().x())));
         int y1 = int(std::ceil(scaled_->pixels_per_unit.y() * float(box.apex().y())));
         return {{x0, y0}, {x1 - x0, y1 - y0}};
-    }
-
-    ScaledFont::bitmap_ref::bitmap_ref(Point shape, unsigned char* ptr) noexcept:
-    ptr_(),
-    shape_(shape) {
-        if (ptr) {
-            ptr_.reset(ptr, [] (unsigned char* p) { if (p) stbtt_FreeBitmap(p, nullptr); });
-        } else {
-            ptr_.reset(new unsigned char[area()], std::default_delete<unsigned char[]>());
-            std::memset(begin(), 0, area());
-        }
     }
 
     // FontMap class
