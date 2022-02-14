@@ -9,7 +9,6 @@
 #include <limits>
 #include <memory>
 #include <type_traits>
-#include <utility>
 
 namespace RS::Graphics::Plane::Detail {
 
@@ -47,19 +46,7 @@ namespace RS::Graphics::Plane::Detail {
         Point shape_;
         std::shared_ptr<T[]> ptr_;
 
-        static constexpr T multiply_alpha(T a, T b) noexcept {
-            if constexpr (std::is_floating_point_v<T>) {
-                return a * b;
-            } else if constexpr (sizeof(T) <= 4) {
-                using U = std::conditional_t<(sizeof(T) == 1), uint16_t,
-                    std::conditional_t<(sizeof(T) == 2), uint32_t, uint64_t>>;
-                U c = (U(a) * U(b) + U(scale) / 2) / U(scale);
-                return T(c);
-            } else {
-                double c = double(a) * double(b) / double(scale);
-                return T(c + 0.5);
-            }
-        }
+        template <typename C> static constexpr C blend(C fg, C bg, T alpha, bool pma) noexcept;
 
     };
 
@@ -76,55 +63,12 @@ namespace RS::Graphics::Plane::Detail {
         template <typename T>
         template <typename C, int F>
         void ImageMask<T>::make_image(Image<C, F>& image, C foreground, C background) const {
-
             static_assert(C::is_linear);
-
-            using namespace Core;
-
-            using output_image = Image<C, F>;
-
-            output_image result(shape());
-
-            if constexpr (C::has_alpha) {
-
-                using working_colour = Colour<T>;
-
-                working_colour fg, bg, wc;
-                convert_colour(foreground, fg);
-                convert_colour(background, bg);
-
-                auto out = result.begin();
-
-                for (auto& im: *this) {
-
-                    wc = fg;
-                    wc.alpha() = multiply_alpha(fg.alpha(), im);
-                    wc = alpha_blend(wc, bg);
-                    convert_colour(wc, *out);
-
-                    if constexpr (output_image::is_premultiplied)
-                        out->multiply_alpha();
-
-                    ++out;
-
-                }
-
-            } else {
-
-                using scalar_type = std::conditional_t<std::is_floating_point_v<T>, T,
-                    std::conditional_t<(sizeof(T) < sizeof(double)), float, double>>;
-
-                static constexpr auto inv_scale = 1 / scalar_type(scale);
-
-                auto out = result.begin();
-
-                for (auto& im: *this)
-                    *out++ = lerp(background, foreground, inv_scale * im);
-
-            }
-
-            image = std::move(result);
-
+            static constexpr bool pma = Image<C, F>::is_premultiplied;
+            image.reset(shape());
+            auto out = image.begin();
+            for (T alpha: *this)
+                *out++ = blend(foreground, background, alpha, pma);
         }
 
         template <typename T>
@@ -133,7 +77,7 @@ namespace RS::Graphics::Plane::Detail {
 
             static_assert(C::is_linear);
 
-            using namespace Core;
+            static constexpr bool pma = Image<C, F>::is_premultiplied;
 
             int mask_x1 = std::max(0, - offset.x());
             int mask_y1 = std::max(0, - offset.y());
@@ -145,45 +89,46 @@ namespace RS::Graphics::Plane::Detail {
 
             int image_x1 = mask_x1 + offset.x();
             int image_y1 = mask_y1 + offset.y();
-
             Point p; // point on mask
             Point q; // point on image
 
+            for (p.y() = mask_y1, q.y() = image_y1; p.y() < mask_y2; ++p.y(), ++q.y())
+                for (p.x() = mask_x1, q.x() = image_x1; p.x() < mask_x2; ++p.x(), ++q.x())
+                    image[q] = blend(colour, image[q], (*this)[p], pma);
+
+        }
+
+        template <typename T>
+        template <typename C>
+        constexpr C ImageMask<T>::blend(C fg, C bg, T alpha, bool pma) noexcept {
+
+            using value_type = typename C::value_type;
+            using alpha_type = std::conditional_t<(sizeof(value_type) < sizeof(double)), float, double>;
+
+            alpha_type a = alpha_type(alpha) / alpha_type(scale);
+
             if constexpr (C::has_alpha) {
 
-                using output_image = Image<C, F>;
-                using working_colour = Colour<T>;
+                alpha_type fga1 = a * alpha_type(fg.alpha());
+                value_type fga2;
 
-                working_colour fg, bg, wc;
-                convert_colour(colour, fg);
+                if constexpr (std::is_floating_point_v<value_type>)
+                    fga2 = value_type(fga1);
+                else
+                    fga2 = value_type(alpha_type(C::scale) * fga1 + alpha_type(0.5));
 
-                for (p.y() = mask_y1, q.y() = image_y1; p.y() < mask_y2; ++p.y(), ++q.y()) {
+                C modified_fg = fg;
+                modified_fg.alpha() = fga2;
+                C result = alpha_blend(modified_fg, bg);
 
-                    for (p.x() = mask_x1, q.x() = image_x1; p.x() < mask_x2; ++p.x(), ++q.x()) {
+                if (pma)
+                    result.multiply_alpha();
 
-                        wc = fg;
-                        wc.alpha() = multiply_alpha(fg.alpha(), (*this)[p]);
-                        convert_colour(image[q], bg);
-                        wc = alpha_blend(wc, bg);
-                        convert_colour(wc, image[q]);
-
-                        if constexpr (output_image::is_premultiplied)
-                            image[q].multiply_alpha();
-
-                    }
-
-                }
+                return result;
 
             } else {
 
-                using scalar_type = std::conditional_t<std::is_floating_point_v<T>, T,
-                    std::conditional_t<(sizeof(T) < sizeof(double)), float, double>>;
-
-                static constexpr auto inv_scale = 1 / scalar_type(scale);
-
-                for (p.y() = mask_y1, q.y() = image_y1; p.y() < mask_y2; ++p.y(), ++q.y())
-                    for (p.x() = mask_x1, q.x() = image_x1; p.x() < mask_x2; ++p.x(), ++q.x())
-                        image[q] = lerp(image[q], colour, inv_scale * (*this)[p]);
+                return lerp(bg, fg, a);
 
             }
 
