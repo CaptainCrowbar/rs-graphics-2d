@@ -168,7 +168,9 @@ between lines (this can be negative if you want lines to be closer together
 than the default).
 
 The text colour defaults to black; the background colour defaults to
-transparent if an alpha channel is present, otherwise to white.
+transparent if an alpha channel is present, otherwise to white. Note that
+non-RGB colours do not have `black()` and `white()` static methods; if you
+use a non-RGB colour, you must supply both colours explicitly.
 
 This will throw `std::invalid_argument` if the font is null or the text
 contains invalid UTF-8. It will run without error if nothing was rendered
