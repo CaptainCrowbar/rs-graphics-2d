@@ -145,28 +145,7 @@ namespace RS::Graphics::Plane {
             if (mask.empty())
                 return;
 
-            // i prefix = image coordinates, m prefix = mask coordinates
-            // ic, mc prefix = clipped to image bounds
-
-            Point i_base = ref_point + offset;     // Top left of mask
-            Point i_apex = i_base + mask.shape();  // Bottom right of mask
-            Point ic_base = maxv(i_base, Point::null());
-            Point ic_apex = minv(i_apex, image.shape());
-
-            if (ic_base.x() >= ic_apex.x() || ic_base.y() >= ic_apex.y())
-                return;
-
-            Point mc_base = ic_base - i_base;
-            int width = ic_apex.x() - ic_base.x();
-
-            for (int iy = ic_base.y(), my = mc_base.y(); iy < ic_apex.y(); ++iy, ++my) {
-                auto i_iter = image.locate({ic_base.x(), iy});
-                auto m_iter = &mask[{mc_base.x(), my}];
-                for (int x = 0; x < width; ++x, ++i_iter, ++m_iter) {
-                    text_colour.alpha() = byte_scale * float(*m_iter);
-                    *i_iter = alpha_blend(text_colour, *i_iter);
-                }
-            }
+            mask.onto_image(image, ref_point + offset, text_colour);
 
         }
 

@@ -40,7 +40,7 @@ namespace RS::Graphics::Plane::Detail {
         Point shape() const noexcept { return shape_; }
 
         template <typename C, int F> void make_image(Image<C, F>& image, C foreground, C background) const;
-        template <typename C, int F> void blend_image(Image<C, F>& image, Point offset, C colour) const;
+        template <typename C, int F> void onto_image(Image<C, F>& image, Point offset, C colour) const;
 
     private:
 
@@ -109,13 +109,16 @@ namespace RS::Graphics::Plane::Detail {
 
         template <typename T>
         template <typename C, int F>
-        void ImageMask<T>::blend_image(Image<C, F>& image, Point offset, C colour) const {
+        void ImageMask<T>::onto_image(Image<C, F>& image, Point offset, C colour) const {
 
             // TODO - allow colours without alpha channel
 
             static_assert(C::is_linear);
 
             using namespace Core;
+
+            using output_image = Image<C, F>;
+            using working_colour = Colour<T>;
 
             int mask_x1 = std::max(0, - offset.x());
             int mask_y1 = std::max(0, - offset.y());
@@ -131,13 +134,18 @@ namespace RS::Graphics::Plane::Detail {
             Point p; // point on mask
             Point q; // point on image
 
+            working_colour fg, bg, wc;
+            convert_colour(colour, fg);
+
             for (p.y() = mask_y1, q.y() = image_y1; p.y() < mask_y2; ++p.y(), ++q.y()) {
                 for (p.x() = mask_x1, q.x() = image_x1; p.x() < mask_x2; ++p.x(), ++q.x()) {
-                    T mask_value = (*this)[p];
-                    C mask_pixel = colour;
-                    mask_pixel.alpha() = multiply_alpha(colour.alpha(), mask_value);
-                    C& image_pixel = image[q];
-                    image_pixel = alpha_blend(mask_pixel, image_pixel);
+                    wc = fg;
+                    wc.alpha() = multiply_alpha(fg.alpha(), (*this)[p]);
+                    convert_colour(image[q], bg);
+                    wc = alpha_blend(wc, bg);
+                    convert_colour(wc, image[q]);
+                    if (output_image::is_premultiplied)
+                        image[q].multiply_alpha();
                 }
             }
 
