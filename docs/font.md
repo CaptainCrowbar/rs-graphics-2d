@@ -152,12 +152,12 @@ pixels.
 template <typename C, int F>
     void ScaledFont::render(Image<C, F>& image, Point& offset,
         const std::string& text, int line_shift = 0,
-        C text_colour = C::black(), C background = C::clear()) const;
+        C text_colour = C::black(), C background = [see below]) const;
 ```
 
 This function renders text to a new image. The supplied `image` object will be
 reset to the minimum size required to contain the rendered text. The image
-must have a linear colour space and an alpha channel.
+must have a linear colour space.
 
 Multiple lines of text are supported. The `offset` vector will be set to the
 position of the image's top left corner relative to the initial reference
@@ -168,7 +168,7 @@ between lines (this can be negative if you want lines to be closer together
 than the default).
 
 The text colour defaults to black; the background colour defaults to
-transparent.
+transparent if an alpha channel is present, otherwise to white.
 
 This will throw `std::invalid_argument` if the font is null or the text
 contains invalid UTF-8. It will run without error if nothing was rendered
@@ -182,7 +182,7 @@ template <typename C, int F>
 ```
 
 This function renders text to an existing image. The image must have a linear
-colour space and an alpha channel.
+colour space.
 
 Multiple lines of text are supported. The supplied `ref_point` is used as the
 beginning of the baseline of the first line of text (it should be at least
@@ -193,8 +193,9 @@ If a `line_shift` is supplied, it will be added to the normal vertical spacing
 between lines (this can be negative if you want lines to be closer together
 than the default).
 
-The text colour defaults to black. This will be alpha blended with the
-existing pixels of the image.
+The text colour defaults to black. If an alpha channel is present, this will
+be alpha blended with the existing pixels of the image; otherwise, simple
+linear antialiasing is used.
 
 This will throw `std::invalid_argument` if the font is null or the text
 contains invalid UTF-8. It will run without error if nothing was rendered

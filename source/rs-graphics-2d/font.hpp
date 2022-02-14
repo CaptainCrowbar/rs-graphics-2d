@@ -16,6 +16,18 @@
 
 namespace RS::Graphics::Plane {
 
+    namespace Detail {
+
+        template <typename C>
+        constexpr C default_text_background() noexcept {
+            if constexpr (C::has_alpha)
+                return C::clear();
+            else
+                return C::white();
+        }
+
+    }
+
     namespace FontStyle {
 
         constexpr int regular   = 0;
@@ -82,7 +94,7 @@ namespace RS::Graphics::Plane {
         int line_gap() const noexcept;
         int line_offset() const noexcept { return ascent() - descent() + line_gap(); }
         template <typename C, int F> void render(Image<C, F>& image, Point& offset, const std::string& text,
-            int line_shift = 0, C text_colour = C::black(), C background = C::clear()) const;
+            int line_shift = 0, C text_colour = C::black(), C background = Detail::default_text_background<C>()) const;
         template <typename C, int F> void render_to(Image<C, F>& image, Point ref_point, const std::string& text,
             int line_shift = 0, C text_colour = C::black()) const;
         Core::Box_i2 text_box(const std::string& text, int line_shift = 0) const;
