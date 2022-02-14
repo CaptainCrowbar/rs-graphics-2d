@@ -77,30 +77,50 @@ namespace RS::Graphics::Plane::Detail {
         template <typename C, int F>
         void ImageMask<T>::make_image(Image<C, F>& image, C foreground, C background) const {
 
-            // TODO - allow colours without alpha channel
-
             static_assert(C::is_linear);
 
             using namespace Core;
 
             using output_image = Image<C, F>;
-            using working_colour = Colour<T>;
-
-            working_colour fg, bg, wc;
-            convert_colour(foreground, fg);
-            convert_colour(background, bg);
 
             output_image result(shape());
-            auto out = result.begin();
 
-            for (auto& im: *this) {
-                wc = fg;
-                wc.alpha() = multiply_alpha(fg.alpha(), im);
-                wc = alpha_blend(wc, bg);
-                convert_colour(wc, *out);
-                if (output_image::is_premultiplied)
-                    out->multiply_alpha();
-                ++out;
+            if constexpr (C::has_alpha) {
+
+                using working_colour = Colour<T>;
+
+                working_colour fg, bg, wc;
+                convert_colour(foreground, fg);
+                convert_colour(background, bg);
+
+                auto out = result.begin();
+
+                for (auto& im: *this) {
+
+                    wc = fg;
+                    wc.alpha() = multiply_alpha(fg.alpha(), im);
+                    wc = alpha_blend(wc, bg);
+                    convert_colour(wc, *out);
+
+                    if constexpr (output_image::is_premultiplied)
+                        out->multiply_alpha();
+
+                    ++out;
+
+                }
+
+            } else {
+
+                using scalar_type = std::conditional_t<std::is_floating_point_v<T>, T,
+                    std::conditional_t<(sizeof(T) < sizeof(double)), float, double>>;
+
+                static constexpr auto inv_scale = 1 / scalar_type(scale);
+
+                auto out = result.begin();
+
+                for (auto& im: *this)
+                    *out++ = lerp(background, foreground, inv_scale * im);
+
             }
 
             image = std::move(result);
@@ -111,14 +131,9 @@ namespace RS::Graphics::Plane::Detail {
         template <typename C, int F>
         void ImageMask<T>::onto_image(Image<C, F>& image, Point offset, C colour) const {
 
-            // TODO - allow colours without alpha channel
-
             static_assert(C::is_linear);
 
             using namespace Core;
-
-            using output_image = Image<C, F>;
-            using working_colour = Colour<T>;
 
             int mask_x1 = std::max(0, - offset.x());
             int mask_y1 = std::max(0, - offset.y());
@@ -134,19 +149,42 @@ namespace RS::Graphics::Plane::Detail {
             Point p; // point on mask
             Point q; // point on image
 
-            working_colour fg, bg, wc;
-            convert_colour(colour, fg);
+            if constexpr (C::has_alpha) {
 
-            for (p.y() = mask_y1, q.y() = image_y1; p.y() < mask_y2; ++p.y(), ++q.y()) {
-                for (p.x() = mask_x1, q.x() = image_x1; p.x() < mask_x2; ++p.x(), ++q.x()) {
-                    wc = fg;
-                    wc.alpha() = multiply_alpha(fg.alpha(), (*this)[p]);
-                    convert_colour(image[q], bg);
-                    wc = alpha_blend(wc, bg);
-                    convert_colour(wc, image[q]);
-                    if (output_image::is_premultiplied)
-                        image[q].multiply_alpha();
+                using output_image = Image<C, F>;
+                using working_colour = Colour<T>;
+
+                working_colour fg, bg, wc;
+                convert_colour(colour, fg);
+
+                for (p.y() = mask_y1, q.y() = image_y1; p.y() < mask_y2; ++p.y(), ++q.y()) {
+
+                    for (p.x() = mask_x1, q.x() = image_x1; p.x() < mask_x2; ++p.x(), ++q.x()) {
+
+                        wc = fg;
+                        wc.alpha() = multiply_alpha(fg.alpha(), (*this)[p]);
+                        convert_colour(image[q], bg);
+                        wc = alpha_blend(wc, bg);
+                        convert_colour(wc, image[q]);
+
+                        if constexpr (output_image::is_premultiplied)
+                            image[q].multiply_alpha();
+
+                    }
+
                 }
+
+            } else {
+
+                using scalar_type = std::conditional_t<std::is_floating_point_v<T>, T,
+                    std::conditional_t<(sizeof(T) < sizeof(double)), float, double>>;
+
+                static constexpr auto inv_scale = 1 / scalar_type(scale);
+
+                for (p.y() = mask_y1, q.y() = image_y1; p.y() < mask_y2; ++p.y(), ++q.y())
+                    for (p.x() = mask_x1, q.x() = image_x1; p.x() < mask_x2; ++p.x(), ++q.x())
+                        image[q] = lerp(image[q], colour, inv_scale * (*this)[p]);
+
             }
 
         }
