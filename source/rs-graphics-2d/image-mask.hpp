@@ -25,15 +25,15 @@ namespace RS::Graphics::Plane::Detail {
 
         ImageMask() = default;
         explicit ImageMask(Point shape) noexcept;
-        template <typename Del> explicit ImageMask(Point shape, T* ptr, Del del) noexcept: shape_(shape), ptr_(ptr, del) {}
+        template <typename Del> ImageMask(Point shape, T* ptr, Del del) noexcept: shape_(shape), ptr_(ptr, del) {}
 
-        T& operator[](Point pos) noexcept { return ptr_.get()[size_t(shape_.x()) * size_t(pos.y()) + size_t(pos.x())]; }
-        const T& operator[](Point pos) const noexcept { return ptr_.get()[size_t(shape_.x()) * size_t(pos.y()) + size_t(pos.x())]; }
+        T& operator[](Point p) noexcept { return ptr_.get()[point_to_index(p)]; }
+        const T& operator[](Point p) const noexcept { return ptr_.get()[point_to_index(p)]; }
 
         T* begin() noexcept { return ptr_.get(); }
         const T* begin() const noexcept { return ptr_.get(); }
-        T* end() noexcept { return ptr_.get() + area(); }
-        const T* end() const noexcept { return ptr_.get() + area(); }
+        T* end() noexcept { return begin() + area(); }
+        const T* end() const noexcept { return begin() + area(); }
         size_t area() const noexcept { return size_t(shape_.x()) * size_t(shape_.y()); }
         bool empty() const noexcept { return ! ptr_ || shape_.x() <= 0 || shape_.y() <= 0; }
         Point shape() const noexcept { return shape_; }
@@ -45,6 +45,8 @@ namespace RS::Graphics::Plane::Detail {
 
         Point shape_;
         std::shared_ptr<T[]> ptr_;
+
+        size_t point_to_index(Point p) const noexcept { return size_t(shape_.x()) * size_t(p.y()) + size_t(p.x()); }
 
         template <typename C> static constexpr C blend(C fg, C bg, T alpha, int pma) noexcept;
 
