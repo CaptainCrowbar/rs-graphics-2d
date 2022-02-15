@@ -46,7 +46,7 @@ namespace RS::Graphics::Plane::Detail {
         Point shape_;
         std::shared_ptr<T[]> ptr_;
 
-        template <typename C> static constexpr C blend(C fg, C bg, T alpha, bool pma) noexcept;
+        template <typename C> static constexpr C blend(C fg, C bg, T alpha, int pma) noexcept;
 
     };
 
@@ -63,12 +63,19 @@ namespace RS::Graphics::Plane::Detail {
         template <typename T>
         template <typename C, int F>
         void ImageMask<T>::make_image(Image<C, F>& image, C foreground, C background) const {
+
             static_assert(C::is_linear);
-            static constexpr bool pma = Image<C, F>::is_premultiplied;
+
+            using namespace Core;
+
+            static constexpr int pma = Image<C, F>::is_premultiplied ? Pma::result : 0;
+
             image.reset(shape());
             auto out = image.begin();
+
             for (T alpha: *this)
                 *out++ = blend(foreground, background, alpha, pma);
+
         }
 
         template <typename T>
@@ -77,7 +84,9 @@ namespace RS::Graphics::Plane::Detail {
 
             static_assert(C::is_linear);
 
-            static constexpr bool pma = Image<C, F>::is_premultiplied;
+            using namespace Core;
+
+            static constexpr int pma = Image<C, F>::is_premultiplied ? Pma::second | Pma::result : 0;
 
             int mask_x1 = std::max(0, - offset.x());
             int mask_y1 = std::max(0, - offset.y());
@@ -100,7 +109,7 @@ namespace RS::Graphics::Plane::Detail {
 
         template <typename T>
         template <typename C>
-        constexpr C ImageMask<T>::blend(C fg, C bg, T alpha, bool pma) noexcept {
+        constexpr C ImageMask<T>::blend(C fg, C bg, T alpha, int pma) noexcept {
 
             using value_type = typename C::value_type;
             using alpha_type = std::conditional_t<(sizeof(value_type) < sizeof(double)), float, double>;
