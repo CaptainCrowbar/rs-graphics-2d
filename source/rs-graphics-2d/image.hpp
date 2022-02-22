@@ -6,6 +6,7 @@
 #include "rs-format/format.hpp"
 #include "rs-format/string.hpp"
 #include "rs-io/path.hpp"
+#include "rs-tl/types.hpp"
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
@@ -189,7 +190,7 @@ namespace RS::Graphics::Plane {
 
         template <typename U = T>
         Image<colour_type, Flags | ImageFlags::premultiplied>
-        multiply_alpha(std::enable_if<Core::Detail::SfinaeTrue<U, colour_type::can_premultiply
+        multiply_alpha(std::enable_if<TL::SfinaeTrue<U, colour_type::can_premultiply
                 && ! is_premultiplied>::value>* = nullptr) const {
             Image<colour_type, Flags | ImageFlags::premultiplied> result(shape());
             auto out = result.begin();
@@ -200,7 +201,7 @@ namespace RS::Graphics::Plane {
 
         template <typename U = T>
         Image<colour_type, Flags - ImageFlags::premultiplied>
-        unmultiply_alpha(std::enable_if<Core::Detail::SfinaeTrue<U, colour_type::can_premultiply
+        unmultiply_alpha(std::enable_if<TL::SfinaeTrue<U, colour_type::can_premultiply
                 && is_premultiplied>::value>* = nullptr) const {
             Image<colour_type, Flags - ImageFlags::premultiplied> result(shape());
             auto out = result.begin();
