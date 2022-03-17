@@ -20,6 +20,9 @@ int main(int argc, char** argv) {
     UNIT_TEST(rs_graphics_2d_image_io_load)
     UNIT_TEST(rs_graphics_2d_image_io_save)
 
+    // image-resize-test.cpp
+    UNIT_TEST(rs_graphics_2d_image_resize)
+
     // font-test.cpp
     UNIT_TEST(rs_graphics_2d_font_loading)
     UNIT_TEST(rs_graphics_2d_font_properties)

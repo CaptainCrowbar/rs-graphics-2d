@@ -4,6 +4,8 @@
 #define STB_IMAGE_STATIC
 #define STBI_FAILURE_USERMSG
 #define STBI_WINDOWS_UTF8
+#define STB_IMAGE_RESIZE_IMPLEMENTATION
+#define STB_IMAGE_RESIZE_STATIC
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_STATIC
 #define STBIW_WINDOWS_UTF8
@@ -25,6 +27,7 @@
 #endif
 
 #include "rs-graphics-2d/stb/stb_image.h"
+#include "rs-graphics-2d/stb/stb_image_resize.h"
 #include "rs-graphics-2d/stb/stb_image_write.h"
 
 #ifdef _MSC_VER
