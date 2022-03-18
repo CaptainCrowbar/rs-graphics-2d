@@ -15,12 +15,12 @@ namespace RS::Graphics::Plane;
 ## Constants
 
 ```c++
-namespace FontStyle {
-    constexpr int regular;
-    constexpr int bold;
-    constexpr int italic;
-    constexpr int fallback;
-}
+enum class FontStyle: int {
+    regular = 0,
+    bold,
+    italic,
+    fallback,
+};
 ```
 
 Style flags used in the `FontMap::find()` function.
@@ -305,7 +305,7 @@ an empty list if `contains(family)` is false.
 
 ```c++
 Font FontMap::find(const std::vector<std::string>& families,
-    int style = FontStyle::regular) const;
+    FontStyle style = FontStyle::regular) const;
 ```
 
 Loads the first matching font in the `FontMap`. This will first search the

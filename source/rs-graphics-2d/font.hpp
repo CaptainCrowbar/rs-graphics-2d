@@ -8,6 +8,7 @@
 #include "rs-graphics-core/vector.hpp"
 #include "rs-format/string.hpp"
 #include "rs-io/path.hpp"
+#include "rs-tl/enum.hpp"
 #include <map>
 #include <memory>
 #include <stdexcept>
@@ -28,14 +29,14 @@ namespace RS::Graphics::Plane {
 
     }
 
-    namespace FontStyle {
+    enum class FontStyle: int {
+        regular   = 0,
+        bold      = 1,
+        italic    = 2,
+        fallback  = 4,
+    };
 
-        constexpr int regular   = 0;
-        constexpr int bold      = 1;
-        constexpr int italic    = 2;
-        constexpr int fallback  = 4;
-
-    }
+    RS_DEFINE_BITMASK_OPERATORS(FontStyle)
 
     class Font {
 
@@ -171,7 +172,7 @@ namespace RS::Graphics::Plane {
         bool empty() const noexcept { return table_.empty(); }
         std::vector<std::string> families() const;
         std::vector<std::string> subfamilies(const std::string& family) const;
-        Font find(const std::vector<std::string>& families, int style = FontStyle::regular) const;
+        Font find(const std::vector<std::string>& families, FontStyle style = FontStyle::regular) const;
         Font load(const std::string& family, const std::string& subfamily) const;
         void search(const IO::Path& dir, int flags = 0);
         void search_system();

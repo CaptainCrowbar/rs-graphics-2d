@@ -737,7 +737,7 @@ namespace RS::Graphics::Plane {
         return vec;
     }
 
-    Font FontMap::find(const std::vector<std::string>& families, int style) const {
+    Font FontMap::find(const std::vector<std::string>& families, FontStyle style) const {
 
         static const std::vector<std::vector<std::string>> style_names = {
             { // Regular
@@ -757,8 +757,8 @@ namespace RS::Graphics::Plane {
             },
         };
 
-        int style_index = style & 3;
-        bool use_fallback = (style & FontStyle::fallback) != 0;
+        int style_index = int(style) & 3;
+        bool use_fallback = !! (style & FontStyle::fallback);
 
         for (auto& family: families) {
             auto fam_it = table_.find(family);
