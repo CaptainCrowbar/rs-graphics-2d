@@ -15,15 +15,16 @@ namespace RS::Graphics::Plane;
 ## Constants
 
 ```c++
-namespace Map {
-    using flag_type = [unsigned integer];
-}
+enum class Map: uint32_t;
+std::string to_string(Map m);
+std::ostream& operator<<(std::ostream& out, Map m);
 ```
 
 Type used for bitmask flags.
 
 | Flag                      | Description                                                                                         |
 | ----                      | -----------                                                                                         |
+| `Map::none = 0`           |                                                                                                     |
 |                           | **Projection family**                                                                               |
 | `Map::azimuthal`          | Azimuthal projection                                                                                |
 | `Map::pseudoazimuthal`    | * Pseudo-azimuthal projection                                                                       |
@@ -56,7 +57,7 @@ Type used for bitmask flags.
 | `Map::shape_mask`         | Combination of all shape bits                                                                       |
 | `Map::other_mask`         | Combination of all other property bits                                                              |
 
-Flag constants. Each of these is a distinct one-bit bitmask. A projection's
+Bitmask constants. Each of these is a distinct one-bit bitmask. A projection's
 `map_properties` constant (also reflected in its `properties()` function) is
 a combination of these values, indicating the properties of a specific
 projection. The properties bitmask of any given projection will contain
@@ -98,7 +99,7 @@ virtual std::string MapProjection::name() const;
 The name of the projection.
 
 ```c++
-virtual Map::flag_type MapProjection::properties() const noexcept;
+virtual Map MapProjection::properties() const noexcept;
 ```
 
 The properties bitmask. This returns the same value as the concrete projection
@@ -106,19 +107,13 @@ class's `map_properties` constant, but is accessible through a base class
 reference.
 
 ```c++
-Map::flag_type MapProjection::family() const noexcept;
-Map::flag_type MapProjection::cover() const noexcept;
-Map::flag_type MapProjection::shape() const noexcept;
+Map MapProjection::family() const noexcept;
+Map MapProjection::cover() const noexcept;
+Map MapProjection::shape() const noexcept;
 ```
 
 These return the property flag from each property group. The value returned
 from each of these will always have exactly one bit set.
-
-```c++
-std::string MapProjection::properties_str() const;
-```
-
-The property list formatted as a comma-delimited string.
 
 ### Map projection template
 
@@ -232,7 +227,7 @@ concrete projections of any other type are currently implemented.
 ```c++
 template <typename T> class AzimuthalEquidistantProjection:
         public AzimuthalProjection<T> {
-    static constexpr Map::flag_type map_properties =
+    static constexpr Map map_properties =
         Map::azimuthal | Map::sphere | Map::circle | Map::hemisphere_circle;
     explicit AzimuthalEquidistantProjection(vector_type origin) noexcept;
 };
@@ -248,7 +243,7 @@ also known as the Postel or zenithal equidistant projection.
 ```c++
 template <typename T> class GnomonicProjection:
         public AzimuthalProjection<T> {
-    static constexpr Map::flag_type map_properties =
+    static constexpr Map map_properties =
         Map::azimuthal | Map::sub_hemisphere | Map::plane;
     explicit GnomonicProjection(vector_type origin) noexcept;
 };
@@ -263,7 +258,7 @@ template <typename T> class GnomonicProjection:
 ```c++
 template <typename T> class LambertAzimuthalProjection:
         public AzimuthalProjection<T> {
-    static constexpr Map::flag_type map_properties =
+    static constexpr Map map_properties =
         Map::azimuthal | Map::sphere | Map::circle | Map::equal_area
         | Map::hemisphere_circle;
     explicit LambertAzimuthalProjection(vector_type origin) noexcept;
@@ -280,7 +275,7 @@ also known as the azimuthal equal-area projection or Lambert zenithal equal-area
 ```c++
 template <typename T> class OrthographicProjection:
         public AzimuthalProjection<T> {
-    static constexpr Map::flag_type map_properties =
+    static constexpr Map map_properties =
         Map::azimuthal | Map::hemisphere | Map::circle
         | Map::hemisphere_circle;
     explicit OrthographicProjection(vector_type origin) noexcept;
@@ -297,7 +292,7 @@ also known as the orthogonal projection.
 ```c++
 template <typename T> class StereographicProjection:
         public AzimuthalProjection<T> {
-    static constexpr Map::flag_type map_properties =
+    static constexpr Map map_properties =
         Map::azimuthal | Map::sub_sphere | Map::plane | Map::conformal
         | Map::hemisphere_circle;
     explicit StereographicProjection(vector_type origin) noexcept;
@@ -315,7 +310,7 @@ template <typename T> class StereographicProjection:
 ```c++
 template <typename T> class CylindricalEquidistantProjection:
         public CylindricalProjection<T> {
-    static constexpr Map::flag_type map_properties =
+    static constexpr Map map_properties =
         Map::cylindrical | Map::sphere | Map::rectangle;
     explicit CylindricalEquidistantProjection(vector_type origin) noexcept;
 };
@@ -331,7 +326,7 @@ also known as the equirectangular projection, geographic projection, plate carr√
 ```c++
 template <typename T> class GallPetersProjection:
         public CylindricalProjection<T> {
-    static constexpr Map::flag_type map_properties =
+    static constexpr Map map_properties =
         LambertCylindricalProjection<T>::map_properties;
     explicit GallPetersProjection(vector_type origin) noexcept;
 };
@@ -347,7 +342,7 @@ also known as the Gall orthographic projection.
 ```c++
 template <typename T> class LambertCylindricalProjection:
         public CylindricalProjection<T> {
-    static constexpr Map::flag_type map_properties =
+    static constexpr Map map_properties =
         Map::cylindrical | Map::sphere | Map::rectangle | Map::equal_area;
     explicit LambertCylindricalProjection(vector_type origin) noexcept;
 };
@@ -363,7 +358,7 @@ also known as the cylindrical equal-area projection.
 ```c++
 template <typename T> class MercatorProjection:
         public CylindricalProjection<T> {
-    static constexpr Map::flag_type map_properties =
+    static constexpr Map map_properties =
         Map::cylindrical | Map::sub_sphere | Map::other_shape
         | Map::conformal;
     explicit MercatorProjection(vector_type origin) noexcept;
@@ -381,7 +376,7 @@ template <typename T> class MercatorProjection:
 ```c++
 template <typename T> class Eckert4Projection:
         public PseudocylindricalProjection<T> {
-    static constexpr Map::flag_type map_properties =
+    static constexpr Map map_properties =
         Map::pseudocylindrical | Map::sphere | Map::other_shape
         | Map::equal_area | Map::numerical;
     explicit Eckert4Projection(vector_type origin) noexcept;
@@ -397,7 +392,7 @@ template <typename T> class Eckert4Projection:
 ```c++
 template <typename T> class MollweideProjection:
         public PseudocylindricalProjection<T> {
-    static constexpr Map::flag_type map_properties =
+    static constexpr Map map_properties =
         Map::pseudocylindrical | Map::sphere | Map::ellipse | Map::equal_area
         | Map::hemisphere_circle | Map::numerical;
     explicit MollweideProjection(vector_type origin) noexcept;
@@ -414,7 +409,7 @@ also known as the Babinet projection, elliptical equal-area projection, or homol
 ```c++
 template <typename T> class SinusoidalProjection:
         public PseudocylindricalProjection<T> {
-    static constexpr Map::flag_type map_properties =
+    static constexpr Map map_properties =
         Map::pseudocylindrical | Map::sphere | Map::other_shape
         | Map::equal_area;
     explicit SinusoidalProjection(vector_type origin) noexcept;

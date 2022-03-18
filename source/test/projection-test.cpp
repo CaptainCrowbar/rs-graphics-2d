@@ -77,7 +77,7 @@ void test_rs_graphics_2d_projection_azimuthal_equidistant() {
 
     TEST_EQUAL(proj.name(), "azimuthal equidistant projection");
     TEST_EQUAL(proj.properties(), Map::azimuthal | Map::sphere | Map::circle | Map::hemisphere_circle);
-    TEST_EQUAL(proj.properties_str(), "azimuthal,sphere,circle,hemisphere-circle");
+    TEST_EQUAL(to_string(proj.properties()), "azimuthal,sphere,circle,hemisphere-circle");
     TEST(proj.has_min_x());
     TEST(proj.has_max_x());
     TEST(proj.has_min_y());
@@ -107,7 +107,7 @@ void test_rs_graphics_2d_projection_gnomonic() {
 
     TEST_EQUAL(proj.name(), "gnomonic projection");
     TEST_EQUAL(proj.properties(), Map::azimuthal | Map::sub_hemisphere| Map::plane );
-    TEST_EQUAL(proj.properties_str(), "azimuthal,sub-hemisphere,plane");
+    TEST_EQUAL(to_string(proj.properties()), "azimuthal,sub-hemisphere,plane");
     TEST(! proj.has_min_x());
     TEST(! proj.has_max_x());
     TEST(! proj.has_min_y());
@@ -137,7 +137,7 @@ void test_rs_graphics_2d_projection_lambert_azimuthal() {
 
     TEST_EQUAL(proj.name(), "Lambert azimuthal projection");
     TEST_EQUAL(proj.properties(), Map::azimuthal | Map::sphere | Map::circle | Map::equal_area | Map::hemisphere_circle);
-    TEST_EQUAL(proj.properties_str(), "azimuthal,sphere,circle,equal-area,hemisphere-circle");
+    TEST_EQUAL(to_string(proj.properties()), "azimuthal,sphere,circle,equal-area,hemisphere-circle");
     TEST(proj.has_min_x());
     TEST(proj.has_max_x());
     TEST(proj.has_min_y());
@@ -167,7 +167,7 @@ void test_rs_graphics_2d_projection_orthographic() {
 
     TEST_EQUAL(proj.name(), "orthographic projection");
     TEST_EQUAL(proj.properties(), Map::azimuthal | Map::hemisphere | Map::circle | Map::hemisphere_circle);
-    TEST_EQUAL(proj.properties_str(), "azimuthal,hemisphere,circle,hemisphere-circle");
+    TEST_EQUAL(to_string(proj.properties()), "azimuthal,hemisphere,circle,hemisphere-circle");
     TEST(proj.has_min_x());
     TEST(proj.has_max_x());
     TEST(proj.has_min_y());
@@ -197,7 +197,7 @@ void test_rs_graphics_2d_projection_stereographic() {
 
     TEST_EQUAL(proj.name(), "stereographic projection");
     TEST_EQUAL(proj.properties(), Map::azimuthal | Map::sub_sphere | Map::plane | Map::conformal | Map::hemisphere_circle);
-    TEST_EQUAL(proj.properties_str(), "azimuthal,sub-sphere,plane,conformal,hemisphere-circle");
+    TEST_EQUAL(to_string(proj.properties()), "azimuthal,sub-sphere,plane,conformal,hemisphere-circle");
     TEST(! proj.has_min_x());
     TEST(! proj.has_max_x());
     TEST(! proj.has_min_y());
@@ -227,7 +227,7 @@ void test_rs_graphics_2d_projection_cylindrical_equidistant() {
 
     TEST_EQUAL(proj.name(), "cylindrical equidistant projection");
     TEST_EQUAL(proj.properties(), Map::cylindrical | Map::sphere | Map::rectangle);
-    TEST_EQUAL(proj.properties_str(), "cylindrical,sphere,rectangle");
+    TEST_EQUAL(to_string(proj.properties()), "cylindrical,sphere,rectangle");
     TEST(proj.has_min_x());
     TEST(proj.has_max_x());
     TEST(proj.has_min_y());
@@ -257,7 +257,7 @@ void test_rs_graphics_2d_projection_gall_peters() {
 
     TEST_EQUAL(proj.name(), "Gall-Peters projection");
     TEST_EQUAL(proj.properties(), Map::cylindrical | Map::sphere | Map::rectangle | Map::equal_area);
-    TEST_EQUAL(proj.properties_str(), "cylindrical,sphere,rectangle,equal-area");
+    TEST_EQUAL(to_string(proj.properties()), "cylindrical,sphere,rectangle,equal-area");
     TEST(proj.has_min_x());
     TEST(proj.has_max_x());
     TEST(proj.has_min_y());
@@ -287,7 +287,7 @@ void test_rs_graphics_2d_projection_lambert_cylindrical() {
 
     TEST_EQUAL(proj.name(), "Lambert cylindrical projection");
     TEST_EQUAL(proj.properties(), Map::cylindrical | Map::sphere | Map::rectangle | Map::equal_area);
-    TEST_EQUAL(proj.properties_str(), "cylindrical,sphere,rectangle,equal-area");
+    TEST_EQUAL(to_string(proj.properties()), "cylindrical,sphere,rectangle,equal-area");
     TEST(proj.has_min_x());
     TEST(proj.has_max_x());
     TEST(proj.has_min_y());
@@ -317,7 +317,7 @@ void test_rs_graphics_2d_projection_mercator() {
 
     TEST_EQUAL(proj.name(), "Mercator projection");
     TEST_EQUAL(proj.properties(), Map::cylindrical | Map::sub_sphere | Map::other_shape | Map::conformal);
-    TEST_EQUAL(proj.properties_str(), "cylindrical,sub-sphere,other-shape,conformal");
+    TEST_EQUAL(to_string(proj.properties()), "cylindrical,sub-sphere,other-shape,conformal");
     TEST(proj.has_min_x());
     TEST(proj.has_max_x());
     TEST(! proj.has_min_y());
@@ -347,7 +347,7 @@ void test_rs_graphics_2d_projection_eckert_iv() {
 
     TEST_EQUAL(proj.name(), "Eckert IV projection");
     TEST_EQUAL(proj.properties(), Map::pseudocylindrical | Map::sphere | Map::other_shape | Map::equal_area | Map::numerical);
-    TEST_EQUAL(proj.properties_str(), "pseudocylindrical,sphere,other-shape,equal-area,numerical");
+    TEST_EQUAL(to_string(proj.properties()), "pseudocylindrical,sphere,other-shape,equal-area,numerical");
     TEST(proj.has_min_x());
     TEST(proj.has_max_x());
     TEST(proj.has_min_y());
@@ -377,7 +377,7 @@ void test_rs_graphics_2d_projection_mollweide() {
 
     TEST_EQUAL(proj.name(), "Mollweide projection");
     TEST_EQUAL(proj.properties(), Map::pseudocylindrical | Map::sphere | Map::ellipse | Map::equal_area | Map::hemisphere_circle | Map::numerical);
-    TEST_EQUAL(proj.properties_str(), "pseudocylindrical,sphere,ellipse,equal-area,hemisphere-circle,numerical");
+    TEST_EQUAL(to_string(proj.properties()), "pseudocylindrical,sphere,ellipse,equal-area,hemisphere-circle,numerical");
     TEST(proj.has_min_x());
     TEST(proj.has_max_x());
     TEST(proj.has_min_y());
@@ -407,7 +407,7 @@ void test_rs_graphics_2d_projection_sinusoidal() {
 
     TEST_EQUAL(proj.name(), "sinusoidal projection");
     TEST_EQUAL(proj.properties(), Map::pseudocylindrical | Map::sphere | Map::other_shape | Map::equal_area);
-    TEST_EQUAL(proj.properties_str(), "pseudocylindrical,sphere,other-shape,equal-area");
+    TEST_EQUAL(to_string(proj.properties()), "pseudocylindrical,sphere,other-shape,equal-area");
     TEST(proj.has_min_x());
     TEST(proj.has_max_x());
     TEST(proj.has_min_y());
@@ -437,7 +437,7 @@ void test_rs_graphics_2d_projection_interrupted_eckert_iv() {
 
     TEST_EQUAL(proj.name(), "interrupted Eckert IV projection");
     TEST_EQUAL(proj.properties(), Map::pseudocylindrical | Map::sphere | Map::other_shape | Map::equal_area | Map::interrupted | Map::numerical);
-    TEST_EQUAL(proj.properties_str(), "pseudocylindrical,sphere,other-shape,equal-area,interrupted,numerical");
+    TEST_EQUAL(to_string(proj.properties()), "pseudocylindrical,sphere,other-shape,equal-area,interrupted,numerical");
     TEST(proj.has_min_x());
     TEST(proj.has_max_x());
     TEST(proj.has_min_y());
@@ -467,7 +467,7 @@ void test_rs_graphics_2d_projection_interrupted_mollweide() {
 
     TEST_EQUAL(proj.name(), "interrupted Mollweide projection");
     TEST_EQUAL(proj.properties(), Map::pseudocylindrical | Map::sphere | Map::other_shape | Map::equal_area | Map::interrupted | Map::numerical);
-    TEST_EQUAL(proj.properties_str(), "pseudocylindrical,sphere,other-shape,equal-area,interrupted,numerical");
+    TEST_EQUAL(to_string(proj.properties()), "pseudocylindrical,sphere,other-shape,equal-area,interrupted,numerical");
     TEST(proj.has_min_x());
     TEST(proj.has_max_x());
     TEST(proj.has_min_y());
@@ -497,7 +497,7 @@ void test_rs_graphics_2d_projection_interrupted_sinusoidal() {
 
     TEST_EQUAL(proj.name(), "interrupted sinusoidal projection");
     TEST_EQUAL(proj.properties(), Map::pseudocylindrical | Map::sphere | Map::other_shape | Map::equal_area | Map::interrupted);
-    TEST_EQUAL(proj.properties_str(), "pseudocylindrical,sphere,other-shape,equal-area,interrupted");
+    TEST_EQUAL(to_string(proj.properties()), "pseudocylindrical,sphere,other-shape,equal-area,interrupted");
     TEST(proj.has_min_x());
     TEST(proj.has_max_x());
     TEST(proj.has_min_y());

@@ -6,6 +6,7 @@
 #include "rs-graphics-core/transform.hpp"
 #include "rs-graphics-core/vector.hpp"
 #include "rs-tl/algorithm.hpp"
+#include "rs-tl/enum.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
@@ -43,42 +44,89 @@ namespace RS::Graphics::Plane {
 
     // Constants
 
-    namespace Map {
-
-        using flag_type = uint32_t;
-
+    enum class Map: uint32_t {
+        none               = 0,
         // Projection family
-        constexpr auto azimuthal          = flag_type(1) << 0;   // Azimuthal projections
-        constexpr auto pseudoazimuthal    = flag_type(1) << 1;   // Pseudo-Azimuthal projections
-        constexpr auto conic              = flag_type(1) << 2;   // Conic projections
-        constexpr auto pseudoconic        = flag_type(1) << 3;   // Pseudo-conic projections
-        constexpr auto cylindrical        = flag_type(1) << 4;   // Cylindrical projections
-        constexpr auto pseudocylindrical  = flag_type(1) << 5;   // Pseudo-cylindrical projections
-        constexpr auto hybrid             = flag_type(1) << 6;   // Hybrid projections
+        azimuthal          = 1ul << 0,   // Azimuthal projections
+        pseudoazimuthal    = 1ul << 1,   // Pseudo-Azimuthal projections
+        conic              = 1ul << 2,   // Conic projections
+        pseudoconic        = 1ul << 3,   // Pseudo-conic projections
+        cylindrical        = 1ul << 4,   // Cylindrical projections
+        pseudocylindrical  = 1ul << 5,   // Pseudo-cylindrical projections
+        hybrid             = 1ul << 6,   // Hybrid projections
         // Coverage of the globe
-        constexpr auto sub_hemisphere     = flag_type(1) << 8;   // Less than one hemisphere can be represented
-        constexpr auto hemisphere         = flag_type(1) << 9;   // One hemisphere can be represented
-        constexpr auto sub_sphere         = flag_type(1) << 10;  // More than one hemisphere, but less than the globe, can be represented
-        constexpr auto sphere             = flag_type(1) << 11;  // The complete globe can be represented
+        sub_hemisphere     = 1ul << 8,   // Less than one hemisphere can be represented
+        hemisphere         = 1ul << 9,   // One hemisphere can be represented
+        sub_sphere         = 1ul << 10,  // More than one hemisphere, but less than the globe, can be represented
+        sphere             = 1ul << 11,  // The complete globe can be represented
         // Shape of the map
-        constexpr auto circle             = flag_type(1) << 16;  // The globe maps to a circle
-        constexpr auto ellipse            = flag_type(1) << 17;  // The globe maps to an ellipse
-        constexpr auto plane              = flag_type(1) << 18;  // The globe maps to an infinite plane
-        constexpr auto rectangle          = flag_type(1) << 19;  // The globe maps to a rectangle
-        constexpr auto square             = flag_type(1) << 20;  // The globe maps to a square
-        constexpr auto other_shape        = flag_type(1) << 21;  // The globe maps to some other shape
+        circle             = 1ul << 16,  // The globe maps to a circle
+        ellipse            = 1ul << 17,  // The globe maps to an ellipse
+        plane              = 1ul << 18,  // The globe maps to an infinite plane
+        rectangle          = 1ul << 19,  // The globe maps to a rectangle
+        square             = 1ul << 20,  // The globe maps to a square
+        other_shape        = 1ul << 21,  // The globe maps to some other shape
         // Other properties
-        constexpr auto conformal          = flag_type(1) << 24;  // Local shape is preserved
-        constexpr auto equal_area         = flag_type(1) << 25;  // Area is preserved
-        constexpr auto hemisphere_circle  = flag_type(1) << 26;  // Hemisphere around the origin maps to a circle
-        constexpr auto interrupted        = flag_type(1) << 27;  // Interrupted projections
-        constexpr auto numerical          = flag_type(1) << 28;  // No analytic solution for globe_to_map()
+        conformal          = 1ul << 24,  // Local shape is preserved
+        equal_area         = 1ul << 25,  // Area is preserved
+        hemisphere_circle  = 1ul << 26,  // Hemisphere around the origin maps to a circle
+        interrupted        = 1ul << 27,  // Interrupted projections
+        numerical          = 1ul << 28,  // No analytic solution for globe_to_map()
         // Combined masks
-        constexpr auto family_mask        = flag_type(0xff);
-        constexpr auto cover_mask         = flag_type(0xff) << 8;
-        constexpr auto shape_mask         = flag_type(0xff) << 16;
-        constexpr auto other_mask         = flag_type(0xff) << 24;
+        family_mask        = 0xff,
+        cover_mask         = 0xff00,
+        shape_mask         = 0xff0000,
+        other_mask         = 0xff000000,
+    };
 
+    RS_DEFINE_BITMASK_OPERATORS(Map)
+
+    std::string to_string(Map m);
+
+    inline std::string to_string(Map m) {
+
+        static const std::vector<std::pair<Map, std::string>> all_flags = {
+
+            { Map::azimuthal,          "azimuthal"          },
+            { Map::pseudoazimuthal,    "pseudoazimuthal"    },
+            { Map::conic,              "conic"              },
+            { Map::pseudoconic,        "pseudoconic"        },
+            { Map::cylindrical,        "cylindrical"        },
+            { Map::pseudocylindrical,  "pseudocylindrical"  },
+            { Map::hybrid,             "hybrid"             },
+            { Map::sub_hemisphere,     "sub-hemisphere"     },
+            { Map::hemisphere,         "hemisphere"         },
+            { Map::sub_sphere,         "sub-sphere"         },
+            { Map::sphere,             "sphere"             },
+            { Map::circle,             "circle"             },
+            { Map::ellipse,            "ellipse"            },
+            { Map::plane,              "plane"              },
+            { Map::rectangle,          "rectangle"          },
+            { Map::square,             "square"             },
+            { Map::other_shape,        "other-shape"        },
+            { Map::conformal,          "conformal"          },
+            { Map::equal_area,         "equal-area"         },
+            { Map::hemisphere_circle,  "hemisphere-circle"  },
+            { Map::interrupted,        "interrupted"        },
+            { Map::numerical,          "numerical"          },
+
+        };
+
+        std::string list;
+        for (auto& [flag, str]: all_flags)
+            if (!! (m & flag))
+                list += str + ',';
+        if (list.empty())
+            list = "none";
+        else
+            list.pop_back();
+
+        return list;
+
+    }
+
+    inline std::ostream& operator<<(std::ostream& out, Map m) {
+        return out << to_string(m);
     }
 
     namespace Detail {
@@ -148,57 +196,13 @@ namespace RS::Graphics::Plane {
     public:
         virtual ~MapProjection() noexcept {}
         virtual std::string name() const = 0;
-        virtual Map::flag_type properties() const noexcept = 0;
-        Map::flag_type family() const noexcept { return properties() & Map::family_mask; }
-        Map::flag_type cover() const noexcept { return properties() & Map::cover_mask; }
-        Map::flag_type shape() const noexcept { return properties() & Map::shape_mask; }
-        std::string properties_str() const;
+        virtual Map properties() const noexcept = 0;
+        Map family() const noexcept { return properties() & Map::family_mask; }
+        Map cover() const noexcept { return properties() & Map::cover_mask; }
+        Map shape() const noexcept { return properties() & Map::shape_mask; }
     protected:
         MapProjection() noexcept {}
     };
-
-        inline std::string MapProjection::properties_str() const {
-
-            static const std::vector<std::pair<Map::flag_type, std::string>> all_flags = {
-
-                { Map::azimuthal,          "azimuthal"          },
-                { Map::pseudoazimuthal,    "pseudoazimuthal"    },
-                { Map::conic,              "conic"              },
-                { Map::pseudoconic,        "pseudoconic"        },
-                { Map::cylindrical,        "cylindrical"        },
-                { Map::pseudocylindrical,  "pseudocylindrical"  },
-                { Map::hybrid,             "hybrid"             },
-                { Map::sub_hemisphere,     "sub-hemisphere"     },
-                { Map::hemisphere,         "hemisphere"         },
-                { Map::sub_sphere,         "sub-sphere"         },
-                { Map::sphere,             "sphere"             },
-                { Map::circle,             "circle"             },
-                { Map::ellipse,            "ellipse"            },
-                { Map::plane,              "plane"              },
-                { Map::rectangle,          "rectangle"          },
-                { Map::square,             "square"             },
-                { Map::other_shape,        "other-shape"        },
-                { Map::conformal,          "conformal"          },
-                { Map::equal_area,         "equal-area"         },
-                { Map::hemisphere_circle,  "hemisphere-circle"  },
-                { Map::interrupted,        "interrupted"        },
-                { Map::numerical,          "numerical"          },
-
-            };
-
-            auto props = properties();
-            std::string list;
-            for (auto [flag, str]: all_flags)
-                if ((props & flag) != 0)
-                    list += str + ',';
-            if (list.empty())
-                list = "none";
-            else
-                list.pop_back();
-
-            return list;
-
-        }
 
     // Typed abstract base class
 
@@ -212,9 +216,9 @@ namespace RS::Graphics::Plane {
         static constexpr vector_type default_origin = {0, Core::pi<T> / 2};
         virtual std::shared_ptr<BasicMapProjection> clone() const = 0;
         virtual bool has_min_x() const noexcept { return has_max_x(); }
-        virtual bool has_max_x() const noexcept { return (properties() & Map::plane) == 0; }
+        virtual bool has_max_x() const noexcept { return ! (properties() & Map::plane); }
         virtual bool has_min_y() const noexcept { return has_max_y(); }
-        virtual bool has_max_y() const noexcept { return (properties() & Map::plane) == 0; }
+        virtual bool has_max_y() const noexcept { return ! (properties() & Map::plane); }
         virtual T min_x() const noexcept { return - max_x(); }
         virtual T max_x() const noexcept { return 0; }
         virtual T min_y() const noexcept { return - max_y(); }
@@ -273,7 +277,7 @@ namespace RS::Graphics::Plane {
     bool BasicMapProjection<T>::canonical_on_map(Core::Vector<T, 2> xy) const noexcept {
         T a, b;
         switch (properties() & Map::shape_mask) {
-            case 0:
+            case Map::none:
                 return std::abs(xy.x()) <= max_x();
             case Map::circle:
             case Map::ellipse:
@@ -325,7 +329,7 @@ namespace RS::Graphics::Plane {
     class AzimuthalEquidistantProjection:
     public AzimuthalProjection<T> {
     public:
-        static constexpr Map::flag_type map_properties = Map::azimuthal | Map::sphere | Map::circle | Map::hemisphere_circle;
+        static constexpr Map map_properties = Map::azimuthal | Map::sphere | Map::circle | Map::hemisphere_circle;
         AzimuthalEquidistantProjection() noexcept: AzimuthalEquidistantProjection(BasicMapProjection<T>::default_origin) {}
         explicit AzimuthalEquidistantProjection(Core::Vector<T, 2> origin) noexcept: AzimuthalProjection<T>(origin) {}
         virtual std::shared_ptr<BasicMapProjection<T>> clone() const override
@@ -333,7 +337,7 @@ namespace RS::Graphics::Plane {
         virtual T max_x() const noexcept override { return Core::pi<T>; }
         virtual T max_y() const noexcept override { return Core::pi<T>; }
         virtual std::string name() const override { return "azimuthal equidistant projection"; }
-        virtual Map::flag_type properties() const noexcept override { return map_properties; }
+        virtual Map properties() const noexcept override { return map_properties; }
     protected:
         virtual bool canonical_on_globe(Core::Vector<T, 2> /*polar*/) const noexcept override { return true; }
         virtual bool canonical_on_map(Core::Vector<T, 2> xy) const noexcept override
@@ -377,13 +381,13 @@ namespace RS::Graphics::Plane {
     class GnomonicProjection:
     public AzimuthalProjection<T> {
     public:
-        static constexpr Map::flag_type map_properties = Map::azimuthal | Map::sub_hemisphere | Map::plane;
+        static constexpr Map map_properties = Map::azimuthal | Map::sub_hemisphere | Map::plane;
         GnomonicProjection() noexcept: GnomonicProjection(BasicMapProjection<T>::default_origin) {}
         explicit GnomonicProjection(Core::Vector<T, 2> origin) noexcept: AzimuthalProjection<T>(origin) {}
         virtual std::shared_ptr<BasicMapProjection<T>> clone() const override
             { return std::make_shared<GnomonicProjection>(*this); }
         virtual std::string name() const override { return "gnomonic projection"; }
-        virtual Map::flag_type properties() const noexcept override { return map_properties; }
+        virtual Map properties() const noexcept override { return map_properties; }
     protected:
         virtual bool canonical_on_globe(Core::Vector<T, 2> polar) const noexcept override { return this->angle_from_origin(polar) < Core::pi<T>; }
         virtual bool canonical_on_map(Core::Vector<T, 2> /*xy*/) const noexcept override { return true; }
@@ -424,7 +428,7 @@ namespace RS::Graphics::Plane {
     class LambertAzimuthalProjection:
     public AzimuthalProjection<T> {
     public:
-        static constexpr Map::flag_type map_properties = Map::azimuthal | Map::sphere | Map::circle | Map::equal_area | Map::hemisphere_circle;
+        static constexpr Map map_properties = Map::azimuthal | Map::sphere | Map::circle | Map::equal_area | Map::hemisphere_circle;
         LambertAzimuthalProjection() noexcept: LambertAzimuthalProjection(BasicMapProjection<T>::default_origin) {}
         explicit LambertAzimuthalProjection(Core::Vector<T, 2> origin) noexcept: AzimuthalProjection<T>(origin) {}
         virtual std::shared_ptr<BasicMapProjection<T>> clone() const override
@@ -432,7 +436,7 @@ namespace RS::Graphics::Plane {
         virtual T max_x() const noexcept override { return T(2); }
         virtual T max_y() const noexcept override { return T(2); }
         virtual std::string name() const override { return "Lambert azimuthal projection"; }
-        virtual Map::flag_type properties() const noexcept override { return map_properties; }
+        virtual Map properties() const noexcept override { return map_properties; }
     protected:
         virtual bool canonical_on_globe(Core::Vector<T, 2> /*polar*/) const noexcept override { return true; }
         virtual bool canonical_on_map(Core::Vector<T, 2> xy) const noexcept override { return pow(xy.x(), T(2)) + pow(xy.y(), T(2)) <= T(4); }
@@ -476,7 +480,7 @@ namespace RS::Graphics::Plane {
     class OrthographicProjection:
     public AzimuthalProjection<T> {
     public:
-        static constexpr Map::flag_type map_properties = Map::azimuthal | Map::hemisphere | Map::circle | Map::hemisphere_circle;
+        static constexpr Map map_properties = Map::azimuthal | Map::hemisphere | Map::circle | Map::hemisphere_circle;
         OrthographicProjection() noexcept: OrthographicProjection(BasicMapProjection<T>::default_origin) {}
         explicit OrthographicProjection(Core::Vector<T, 2> origin) noexcept: AzimuthalProjection<T>(origin) {}
         virtual std::shared_ptr<BasicMapProjection<T>> clone() const override
@@ -484,7 +488,7 @@ namespace RS::Graphics::Plane {
         virtual T max_x() const noexcept override { return T(1); }
         virtual T max_y() const noexcept override { return T(1); }
         virtual std::string name() const override { return "orthographic projection"; }
-        virtual Map::flag_type properties() const noexcept override { return map_properties; }
+        virtual Map properties() const noexcept override { return map_properties; }
     protected:
         virtual bool canonical_on_globe(Core::Vector<T, 2> polar) const noexcept override { return this->angle_from_origin(polar) <= Core::pi<T>; }
         virtual bool canonical_on_map(Core::Vector<T, 2> xy) const noexcept override { return pow(xy.x(), T(2)) + pow(xy.y(), T(2)) <= 1; }
@@ -518,13 +522,13 @@ namespace RS::Graphics::Plane {
     class StereographicProjection:
     public AzimuthalProjection<T> {
     public:
-        static constexpr Map::flag_type map_properties = Map::azimuthal | Map::sub_sphere | Map::plane | Map::conformal | Map::hemisphere_circle;
+        static constexpr Map map_properties = Map::azimuthal | Map::sub_sphere | Map::plane | Map::conformal | Map::hemisphere_circle;
         StereographicProjection() noexcept: StereographicProjection(BasicMapProjection<T>::default_origin) {}
         explicit StereographicProjection(Core::Vector<T, 2> origin) noexcept: AzimuthalProjection<T>(origin) {}
         virtual std::shared_ptr<BasicMapProjection<T>> clone() const override
             { return std::make_shared<StereographicProjection>(*this); }
         virtual std::string name() const override { return "stereographic projection"; }
-        virtual Map::flag_type properties() const noexcept override { return map_properties; }
+        virtual Map properties() const noexcept override { return map_properties; }
     protected:
         virtual bool canonical_on_globe(Core::Vector<T, 2> polar) const noexcept override { return this->angle_from_origin(polar) < 2 * Core::pi<T>; }
         virtual bool canonical_on_map(Core::Vector<T, 2> /*xy*/) const noexcept override { return true; }
@@ -567,7 +571,7 @@ namespace RS::Graphics::Plane {
     class CylindricalEquidistantProjection:
     public CylindricalProjection<T> {
     public:
-        static constexpr Map::flag_type map_properties = Map::cylindrical | Map::sphere | Map::rectangle;
+        static constexpr Map map_properties = Map::cylindrical | Map::sphere | Map::rectangle;
         CylindricalEquidistantProjection() noexcept: CylindricalEquidistantProjection(BasicMapProjection<T>::default_origin) {}
         explicit CylindricalEquidistantProjection(Core::Vector<T, 2> origin) noexcept: CylindricalProjection<T>(origin) {}
         virtual std::shared_ptr<BasicMapProjection<T>> clone() const override
@@ -575,7 +579,7 @@ namespace RS::Graphics::Plane {
         virtual T max_x() const noexcept override { return Core::pi<T>; }
         virtual T max_y() const noexcept override { return Core::pi<T> / 2; }
         virtual std::string name() const override { return "cylindrical equidistant projection"; }
-        virtual Map::flag_type properties() const noexcept override { return map_properties; }
+        virtual Map properties() const noexcept override { return map_properties; }
     protected:
         virtual bool canonical_on_globe(Core::Vector<T, 2> /*polar*/) const noexcept override { return true; }
         virtual bool canonical_on_map(Core::Vector<T, 2> xy) const noexcept override { return abs(xy.x()) <= max_x() && abs(xy.y()) <= max_y(); }
@@ -605,7 +609,7 @@ namespace RS::Graphics::Plane {
     class LambertCylindricalProjection:
     public CylindricalProjection<T> {
     public:
-        static constexpr Map::flag_type map_properties = Map::cylindrical | Map::sphere | Map::rectangle | Map::equal_area;
+        static constexpr Map map_properties = Map::cylindrical | Map::sphere | Map::rectangle | Map::equal_area;
         LambertCylindricalProjection() noexcept: LambertCylindricalProjection(BasicMapProjection<T>::default_origin) {}
         explicit LambertCylindricalProjection(Core::Vector<T, 2> origin) noexcept: CylindricalProjection<T>(origin) {}
         virtual std::shared_ptr<BasicMapProjection<T>> clone() const override
@@ -613,7 +617,7 @@ namespace RS::Graphics::Plane {
         virtual T max_x() const noexcept override { return Core::pi<T>; }
         virtual T max_y() const noexcept override { return T(1); }
         virtual std::string name() const override { return "Lambert cylindrical projection"; }
-        virtual Map::flag_type properties() const noexcept override { return map_properties; }
+        virtual Map properties() const noexcept override { return map_properties; }
     protected:
         friend class GallPetersProjection<T>;
         virtual bool canonical_on_globe(Core::Vector<T, 2> /*polar*/) const noexcept override { return true; }
@@ -644,7 +648,7 @@ namespace RS::Graphics::Plane {
     class GallPetersProjection:
     public CylindricalProjection<T> {
     public:
-        static constexpr Map::flag_type map_properties = LambertCylindricalProjection<T>::map_properties;
+        static constexpr Map map_properties = LambertCylindricalProjection<T>::map_properties;
         GallPetersProjection() noexcept: GallPetersProjection(BasicMapProjection<T>::default_origin) {}
         explicit GallPetersProjection(Core::Vector<T, 2> origin) noexcept: CylindricalProjection<T>(origin), lambert_(origin) {}
         virtual std::shared_ptr<BasicMapProjection<T>> clone() const override
@@ -652,7 +656,7 @@ namespace RS::Graphics::Plane {
         virtual T max_x() const noexcept override { return Core::pi<T>; }
         virtual T max_y() const noexcept override { return T(2); }
         virtual std::string name() const override { return "Gall-Peters projection"; }
-        virtual Map::flag_type properties() const noexcept override { return map_properties; }
+        virtual Map properties() const noexcept override { return map_properties; }
     protected:
         virtual bool canonical_on_globe(Core::Vector<T, 2> /*polar*/) const noexcept override { return true; }
         virtual bool canonical_on_map(Core::Vector<T, 2> xy) const noexcept override { return abs(xy.x()) <= max_x() && abs(xy.y()) <= max_y(); }
@@ -678,7 +682,7 @@ namespace RS::Graphics::Plane {
     class MercatorProjection:
     public CylindricalProjection<T> {
     public:
-        static constexpr Map::flag_type map_properties = Map::cylindrical | Map::sub_sphere | Map::other_shape | Map::conformal;
+        static constexpr Map map_properties = Map::cylindrical | Map::sub_sphere | Map::other_shape | Map::conformal;
         MercatorProjection() noexcept: MercatorProjection(BasicMapProjection<T>::default_origin) {}
         explicit MercatorProjection(Core::Vector<T, 2> origin) noexcept: CylindricalProjection<T>(origin) {}
         virtual std::shared_ptr<BasicMapProjection<T>> clone() const override
@@ -687,7 +691,7 @@ namespace RS::Graphics::Plane {
         virtual bool has_max_y() const noexcept override { return false; }
         virtual T max_x() const noexcept override { return Core::pi<T>; }
         virtual std::string name() const override { return "Mercator projection"; }
-        virtual Map::flag_type properties() const noexcept override { return map_properties; }
+        virtual Map properties() const noexcept override { return map_properties; }
     protected:
         virtual bool canonical_on_globe(Core::Vector<T, 2> polar) const noexcept override { return polar[1] > 0 && polar[1] < Core::pi<T>; }
         virtual bool canonical_on_map(Core::Vector<T, 2> xy) const noexcept override { return abs(xy.x()) <= max_x(); }
@@ -719,7 +723,7 @@ namespace RS::Graphics::Plane {
     class Eckert4Projection:
     public PseudocylindricalProjection<T> {
     public:
-        static constexpr Map::flag_type map_properties = Map::pseudocylindrical | Map::sphere | Map::other_shape | Map::equal_area | Map::numerical;
+        static constexpr Map map_properties = Map::pseudocylindrical | Map::sphere | Map::other_shape | Map::equal_area | Map::numerical;
         Eckert4Projection() noexcept: Eckert4Projection(BasicMapProjection<T>::default_origin) {}
         explicit Eckert4Projection(Core::Vector<T, 2> origin) noexcept: PseudocylindricalProjection<T>(origin) {}
         virtual std::shared_ptr<BasicMapProjection<T>> clone() const override
@@ -727,7 +731,7 @@ namespace RS::Graphics::Plane {
         virtual T max_x() const noexcept override { return Core::pi<T>; }
         virtual T max_y() const noexcept override { return Core::pi<T> / 2; }
         virtual std::string name() const override { return "Eckert IV projection"; }
-        virtual Map::flag_type properties() const noexcept override { return map_properties; }
+        virtual Map properties() const noexcept override { return map_properties; }
     protected:
         virtual bool canonical_on_globe(Core::Vector<T, 2> /*polar*/) const noexcept override { return true; }
         virtual bool canonical_on_map(Core::Vector<T, 2> xy) const noexcept override;
@@ -776,7 +780,7 @@ namespace RS::Graphics::Plane {
     class MollweideProjection:
     public PseudocylindricalProjection<T> {
     public:
-        static constexpr Map::flag_type map_properties = Map::pseudocylindrical | Map::sphere | Map::ellipse | Map::equal_area
+        static constexpr Map map_properties = Map::pseudocylindrical | Map::sphere | Map::ellipse | Map::equal_area
             | Map::hemisphere_circle | Map::numerical;
         MollweideProjection() noexcept: MollweideProjection(BasicMapProjection<T>::default_origin) {}
         explicit MollweideProjection(Core::Vector<T, 2> origin) noexcept: PseudocylindricalProjection<T>(origin) {}
@@ -785,7 +789,7 @@ namespace RS::Graphics::Plane {
         virtual T max_x() const noexcept override { return Core::pi<T>; }
         virtual T max_y() const noexcept override { return Core::pi<T> / 2; }
         virtual std::string name() const override { return "Mollweide projection"; }
-        virtual Map::flag_type properties() const noexcept override { return map_properties; }
+        virtual Map properties() const noexcept override { return map_properties; }
     protected:
         virtual bool canonical_on_globe(Core::Vector<T, 2> /*polar*/) const noexcept override { return true; }
         virtual bool canonical_on_map(Core::Vector<T, 2> xy) const noexcept override;
@@ -831,7 +835,7 @@ namespace RS::Graphics::Plane {
     class SinusoidalProjection:
     public PseudocylindricalProjection<T> {
     public:
-        static constexpr Map::flag_type map_properties = Map::pseudocylindrical | Map::sphere | Map::other_shape | Map::equal_area;
+        static constexpr Map map_properties = Map::pseudocylindrical | Map::sphere | Map::other_shape | Map::equal_area;
         SinusoidalProjection() noexcept: SinusoidalProjection(BasicMapProjection<T>::default_origin) {}
         explicit SinusoidalProjection(Core::Vector<T, 2> origin) noexcept: PseudocylindricalProjection<T>(origin) {}
         virtual std::shared_ptr<BasicMapProjection<T>> clone() const override
@@ -839,7 +843,7 @@ namespace RS::Graphics::Plane {
         virtual T max_x() const noexcept override { return Core::pi<T>; }
         virtual T max_y() const noexcept override { return Core::pi<T> / 2; }
         virtual std::string name() const override { return "sinusoidal projection"; }
-        virtual Map::flag_type properties() const noexcept override { return map_properties; }
+        virtual Map properties() const noexcept override { return map_properties; }
     protected:
         virtual bool canonical_on_globe(Core::Vector<T, 2> /*polar*/) const noexcept override { return true; }
         virtual bool canonical_on_map(Core::Vector<T, 2> xy) const noexcept override { return std::abs(xy.x()) <= Core::pi<T> * std::cos(xy.y()); }
@@ -932,7 +936,7 @@ namespace RS::Graphics::Plane {
     public:
         using projection_type = Projection;
         using vector_type = Core::Vector<T, 2>;
-        static constexpr Map::flag_type map_properties =
+        static constexpr Map map_properties =
             (Projection::map_properties & ~ Map::shape_mask & ~ Map::hemisphere_circle) | Map::other_shape | Map::interrupted;
         InterruptedProjection():
             base_type(BasicMapProjection<T>::default_origin, coord_list(), coord_list()), proj_() {}
@@ -945,7 +949,7 @@ namespace RS::Graphics::Plane {
         virtual T max_x() const noexcept override { return proj_.max_x(); }
         virtual T max_y() const noexcept override { return proj_.max_y(); }
         virtual std::string name() const override { return "interrupted " + proj_.name(); }
-        virtual Map::flag_type properties() const noexcept override { return map_properties; }
+        virtual Map properties() const noexcept override { return map_properties; }
     protected:
         virtual bool canonical_on_globe(vector_type /*polar*/) const noexcept override { return true; }
         virtual bool canonical_on_map(vector_type xy) const noexcept override;
