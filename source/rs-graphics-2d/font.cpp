@@ -1,7 +1,7 @@
 #include "rs-graphics-2d/font.hpp"
-#include "rs-format/enum.hpp"
 #include "rs-format/unicode.hpp"
 #include "rs-io/stdio.hpp"
+#include "rs-tl/enum.hpp"
 #include <algorithm>
 #include <array>
 #include <cmath>
