@@ -800,7 +800,7 @@ namespace RS::Graphics::Plane {
             return Font(j->second.file, j->second.index);
     }
 
-    void FontMap::search(const Path& dir, int flags) {
+    void FontMap::search(const Path& dir, Path::flag flags) {
         auto check_file = [this] (const Path& file) {
             if (file.is_file()) {
                 int index = 0;
@@ -808,7 +808,7 @@ namespace RS::Graphics::Plane {
                     table_[font.family()][font.subfamily()] = {file, index++};
             }
         };
-        if ((flags & Path::recurse)) {
+        if (!! (flags & Path::flag::recurse)) {
             for (auto& file: dir.deep_search())
                 check_file(file);
         } else {
@@ -821,7 +821,7 @@ namespace RS::Graphics::Plane {
 
         #ifdef _WIN32
 
-            search(merge_paths(get_windows_dir(), "Fonts"), Path::recurse);
+            search(merge_paths(get_windows_dir(), "Fonts"), Path::flag::recurse);
 
         #else
 
@@ -847,7 +847,7 @@ namespace RS::Graphics::Plane {
                     dir = home / (cdir + 2);
                 else
                     dir = cdir;
-                search(dir, Path::recurse);
+                search(dir, Path::flag::recurse);
             }
 
         #endif

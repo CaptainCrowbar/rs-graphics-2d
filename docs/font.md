@@ -325,7 +325,8 @@ Loads the font with the given family and subfamily name. This will return a
 null font if no matching font is present in the `FontMap`.
 
 ```c++
-void FontMap::search(const std::string& dir, int flags = 0);
+void FontMap::search(const std::string& dir,
+    IO::Path::flag flags = IO::Path::flag::none);
 ```
 
 Searches the given directory for all readable font files. This will do nothing

@@ -174,7 +174,7 @@ namespace RS::Graphics::Plane {
         std::vector<std::string> subfamilies(const std::string& family) const;
         Font find(const std::vector<std::string>& families, FontStyle style = FontStyle::regular) const;
         Font load(const std::string& family, const std::string& subfamily) const;
-        void search(const IO::Path& dir, int flags = 0);
+        void search(const IO::Path& dir, IO::Path::flag flags = IO::Path::flag::none);
         void search_system();
         size_t size() const noexcept { return table_.size(); }
 
