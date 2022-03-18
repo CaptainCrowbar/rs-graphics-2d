@@ -93,9 +93,9 @@ namespace RS::Graphics::Plane {
         int descent() const noexcept;
         int line_gap() const noexcept;
         int line_offset() const noexcept { return ascent() - descent() + line_gap(); }
-        template <typename C, int F> void render(Image<C, F>& image, Point& offset, const std::string& text,
+        template <typename C, ImageFlags F> void render(Image<C, F>& image, Point& offset, const std::string& text,
             int line_shift = 0, C text_colour = C::black(), C background = Detail::default_text_background<C>()) const;
-        template <typename C, int F> void render_to(Image<C, F>& image, Point ref_point, const std::string& text,
+        template <typename C, ImageFlags F> void render_to(Image<C, F>& image, Point ref_point, const std::string& text,
             int line_shift = 0, C text_colour = C::black()) const;
         Core::Box_i2 text_box(const std::string& text, int line_shift = 0) const;
         size_t text_fit(const std::string& text, size_t max_pixels) const;
@@ -117,7 +117,7 @@ namespace RS::Graphics::Plane {
 
     };
 
-        template <typename C, int F>
+        template <typename C, ImageFlags F>
         void ScaledFont::render(Image<C, F>& image, Point& offset, const std::string& text, int line_shift, C text_colour, C background) const {
 
             static_assert(C::is_linear);
@@ -140,7 +140,7 @@ namespace RS::Graphics::Plane {
 
         }
 
-        template <typename C, int F>
+        template <typename C, ImageFlags F>
         void ScaledFont::render_to(Image<C, F>& image, Point ref_point, const std::string& text, int line_shift, C text_colour) const {
 
             static_assert(C::is_linear);

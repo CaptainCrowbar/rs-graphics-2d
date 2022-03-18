@@ -6,6 +6,7 @@
 #include "rs-format/format.hpp"
 #include "rs-format/string.hpp"
 #include "rs-io/path.hpp"
+#include "rs-tl/enum.hpp"
 #include "rs-tl/types.hpp"
 #include <algorithm>
 #include <cstdlib>
@@ -23,12 +24,13 @@ namespace RS::Graphics::Plane {
 
     using Point = Core::Int2;
 
-    namespace ImageFlags {
-
-        constexpr int bottom_up      = 1;  // Image is laid out bottom-up internally
-        constexpr int premultiplied  = 2;  // Image uses premultiplied alpha
-
+    enum class ImageFlags: int {
+        none           = 0,
+        bottom_up      = 1,  // Image is laid out bottom-up internally
+        premultiplied  = 2,  // Image uses premultiplied alpha
     };
+
+    RS_DEFINE_BITMASK_OPERATORS(ImageFlags)
 
     class ImageIoError:
     public std::runtime_error {
@@ -54,7 +56,7 @@ namespace RS::Graphics::Plane {
     ImageInfo query_image(const IO::Path& file) noexcept;
     inline std::ostream& operator<<(std::ostream& out, const ImageInfo& info) { return out << info.str(); }
 
-    template <typename Colour, int Flags = 0>
+    template <typename Colour, ImageFlags Flags = ImageFlags::none>
     class Image;
 
     namespace Detail {
@@ -74,7 +76,7 @@ namespace RS::Graphics::Plane {
 
     }
 
-    template <typename T, typename CS, Core::ColourLayout CL, int Flags>
+    template <typename T, typename CS, Core::ColourLayout CL, ImageFlags Flags>
     class Image<Core::Colour<T, CS, CL>, Flags> {
 
     private:
@@ -142,11 +144,11 @@ namespace RS::Graphics::Plane {
         static constexpr int channels = colour_type::channels;
         static constexpr Core::ColourLayout colour_layout = CL;
         static constexpr bool has_alpha = colour_type::has_alpha;
-        static constexpr bool is_bottom_up = (Flags & ImageFlags::bottom_up) != 0;
+        static constexpr bool is_bottom_up = !! (Flags & ImageFlags::bottom_up);
         static constexpr bool is_top_down = ! is_bottom_up;
         static constexpr bool is_hdr = colour_type::is_hdr;
         static constexpr bool is_linear = colour_type::is_linear;
-        static constexpr bool is_premultiplied = (Flags & ImageFlags::premultiplied) != 0;
+        static constexpr bool is_premultiplied = !! (Flags & ImageFlags::premultiplied);
 
         static_assert(colour_type::can_premultiply || ! is_premultiplied);
 
@@ -200,10 +202,10 @@ namespace RS::Graphics::Plane {
         }
 
         template <typename U = T>
-        Image<colour_type, Flags - ImageFlags::premultiplied>
+        Image<colour_type, Flags & ~ ImageFlags::premultiplied>
         unmultiply_alpha(std::enable_if<TL::SfinaeTrue<U, colour_type::can_premultiply
                 && is_premultiplied>::value>* = nullptr) const {
-            Image<colour_type, Flags - ImageFlags::premultiplied> result(shape());
+            Image<colour_type, Flags & ~ ImageFlags::premultiplied> result(shape());
             auto out = result.begin();
             for (auto& pixel: *this)
                 *out++ = pixel.unmultiply_alpha();
@@ -264,7 +266,7 @@ namespace RS::Graphics::Plane {
     using PmaImage16 = Image<Core::Rgba16, ImageFlags::premultiplied>;
     using PmaHdrImage = Image<Core::Rgbaf, ImageFlags::premultiplied>;
 
-    template <typename C1, int F1, typename C2, int F2>
+    template <typename C1, ImageFlags F1, typename C2, ImageFlags F2>
     void convert_image(const Image<C1, F1>& in, Image<C2, F2>& out) {
 
         using Img1 = Image<C1, F1>;
@@ -281,7 +283,7 @@ namespace RS::Graphics::Plane {
 
         } else if constexpr (Img2::is_premultiplied) {
 
-            Image<C2, F2 - ImageFlags::premultiplied> linear_out;
+            Image<C2, F2 & ~ ImageFlags::premultiplied> linear_out;
             convert_image(in, linear_out);
             out = linear_out.multiply_alpha();
 
@@ -312,7 +314,7 @@ namespace RS::Graphics::Plane {
 
     }
 
-    template <typename T, typename CS, Core::ColourLayout CL, int Flags>
+    template <typename T, typename CS, Core::ColourLayout CL, ImageFlags Flags>
     void Image<Core::Colour<T, CS, CL>, Flags>::load(const IO::Path& file) {
         Point shape;
         if constexpr (std::is_same_v<channel_type, uint8_t>) {
@@ -333,7 +335,7 @@ namespace RS::Graphics::Plane {
         }
     }
 
-    template <typename T, typename CS, Core::ColourLayout CL, int Flags>
+    template <typename T, typename CS, Core::ColourLayout CL, ImageFlags Flags>
     void Image<Core::Colour<T, CS, CL>, Flags>::save(const IO::Path& file, int quality) const {
         auto format = Format::ascii_lowercase(file.split_leaf().second);
         if (format == ".hdr" || format == ".rgbe") {

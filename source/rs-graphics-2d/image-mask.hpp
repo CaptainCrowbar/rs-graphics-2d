@@ -38,8 +38,8 @@ namespace RS::Graphics::Plane::Detail {
         bool empty() const noexcept { return ! ptr_ || shape_.x() <= 0 || shape_.y() <= 0; }
         Point shape() const noexcept { return shape_; }
 
-        template <typename C, int F> void make_image(Image<C, F>& image, C foreground, C background) const;
-        template <typename C, int F> void onto_image(Image<C, F>& image, Point offset, C colour) const;
+        template <typename C, ImageFlags F> void make_image(Image<C, F>& image, C foreground, C background) const;
+        template <typename C, ImageFlags F> void onto_image(Image<C, F>& image, Point offset, C colour) const;
 
     private:
 
@@ -48,7 +48,7 @@ namespace RS::Graphics::Plane::Detail {
 
         size_t point_to_index(Point p) const noexcept { return size_t(shape_.x()) * size_t(p.y()) + size_t(p.x()); }
 
-        template <typename C> static constexpr C blend(C fg, C bg, T alpha, int pma) noexcept;
+        template <typename C> static constexpr C blend(C fg, C bg, T alpha, Core::Pma pma) noexcept;
 
     };
 
@@ -63,14 +63,14 @@ namespace RS::Graphics::Plane::Detail {
         }
 
         template <typename T>
-        template <typename C, int F>
+        template <typename C, ImageFlags F>
         void ImageMask<T>::make_image(Image<C, F>& image, C foreground, C background) const {
 
             static_assert(C::is_linear);
 
             using namespace Core;
 
-            static constexpr int pma = Image<C, F>::is_premultiplied ? Pma::result : 0;
+            static constexpr Core::Pma pma = Image<C, F>::is_premultiplied ? Core::Pma::result : Core::Pma::none;
 
             image.reset(shape());
             auto out = image.begin();
@@ -81,14 +81,14 @@ namespace RS::Graphics::Plane::Detail {
         }
 
         template <typename T>
-        template <typename C, int F>
+        template <typename C, ImageFlags F>
         void ImageMask<T>::onto_image(Image<C, F>& image, Point offset, C colour) const {
 
             static_assert(C::is_linear);
 
             using namespace Core;
 
-            static constexpr int pma = Image<C, F>::is_premultiplied ? Pma::second | Pma::result : 0;
+            static constexpr Core::Pma pma = Image<C, F>::is_premultiplied ? Core::Pma::second | Core::Pma::result : Core::Pma::none;
 
             int mask_x1 = std::max(0, - offset.x());
             int mask_y1 = std::max(0, - offset.y());
@@ -111,7 +111,7 @@ namespace RS::Graphics::Plane::Detail {
 
         template <typename T>
         template <typename C>
-        constexpr C ImageMask<T>::blend(C fg, C bg, T alpha, int pma) noexcept {
+        constexpr C ImageMask<T>::blend(C fg, C bg, T alpha, Core::Pma pma) noexcept {
 
             using value_type = typename C::value_type;
             using alpha_type = std::conditional_t<(sizeof(value_type) < sizeof(double)), float, double>;
@@ -132,7 +132,7 @@ namespace RS::Graphics::Plane::Detail {
                 modified_fg.alpha() = fga2;
                 C result = alpha_blend(modified_fg, bg);
 
-                if (pma)
+                if (!! pma)
                     result.multiply_alpha();
 
                 return result;

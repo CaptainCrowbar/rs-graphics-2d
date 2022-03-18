@@ -21,9 +21,10 @@ using Point = Core::Int2;
 Used for pixel coordinates.
 
 ```c++
-namespace ImageFlags {
-    constexpr int bottom_up;
-    constexpr int premultiplied;
+enum class ImageFlags: int {
+    none = 0,
+    bottom_up,
+    premultiplied,
 }
 ```
 
@@ -61,7 +62,7 @@ not a null vector, indicating that a file has been successfully queried.
 ## Image class
 
 ```c++
-template <typename Colour, int Flags = 0> class Image;
+template <typename Colour, ImageFlags Flags = ImageFlags::none> class Image;
 ```
 
 The image class. This is only defined when `Colour` is an instantiation of
@@ -239,7 +240,7 @@ versa. The returned image type has the opposite premultiplication flag. These
 are only defined if `Colour::can_premultiply` is true.
 
 ```c++
-template <typename C1, int F1, typename C2, int F2>
+template <typename C1, ImageFlags F1, typename C2, ImageFlags F2>
     void convert_image(const Image<C1, F1>& in, Image<C2, F2>& out);
 ```
 
