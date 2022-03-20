@@ -145,6 +145,33 @@ namespace RS::Graphics::Plane {
                 throw ImageIoError(file, {}, false);
         }
 
+        void resize_image_8(const uint8_t* in, Point ishape, uint8_t* out, Point oshape, int num_channels, int alpha_channel,
+                int stb_flags, int stb_edge, int stb_filter, int stb_space) {
+            int rc = stbir_resize_uint8_generic(in, ishape.x(), ishape.y(), 0, out, oshape.x(), oshape.y(), 0,
+                num_channels, alpha_channel, stb_flags, stbir_edge(stb_edge), stbir_filter(stb_filter),
+                stbir_colorspace(stb_space), nullptr);
+            if (rc == 0)
+                throw std::invalid_argument("Internal error: image resize failed");
+        }
+
+        void resize_image_16(const uint16_t* in, Point ishape, uint16_t* out, Point oshape, int num_channels, int alpha_channel,
+                int stb_flags, int stb_edge, int stb_filter, int stb_space) {
+            int rc = stbir_resize_uint16_generic(in, ishape.x(), ishape.y(), 0, out, oshape.x(), oshape.y(), 0,
+                num_channels, alpha_channel, stb_flags, stbir_edge(stb_edge), stbir_filter(stb_filter),
+                stbir_colorspace(stb_space), nullptr);
+            if (rc == 0)
+                throw std::invalid_argument("Internal error: image resize failed");
+        }
+
+        void resize_image_hdr(const float* in, Point ishape, float* out, Point oshape, int num_channels, int alpha_channel,
+                int stb_flags, int stb_edge, int stb_filter, int stb_space) {
+            int rc = stbir_resize_float_generic(in, ishape.x(), ishape.y(), 0, out, oshape.x(), oshape.y(), 0,
+                num_channels, alpha_channel, stb_flags, stbir_edge(stb_edge), stbir_filter(stb_filter),
+                stbir_colorspace(stb_space), nullptr);
+            if (rc == 0)
+                throw std::invalid_argument("Internal error: image resize failed");
+        }
+
     }
 
 }

@@ -6,9 +6,11 @@
 #include "rs-format/format.hpp"
 #include "rs-format/string.hpp"
 #include "rs-io/path.hpp"
+#include "rs-tl/binary.hpp"
 #include "rs-tl/enum.hpp"
 #include "rs-tl/types.hpp"
 #include <algorithm>
+#include <cmath>
 #include <cstdlib>
 #include <cstring>
 #include <iterator>
@@ -31,6 +33,17 @@ namespace RS::Graphics::Plane {
     };
 
     RS_DEFINE_BITMASK_OPERATORS(ImageFlags)
+
+    enum class ImageResize: int {
+        none        = 0,
+        set_aspect  = 1,   // Set a new aspect ratio
+        fix_width   = 2,   // Set width, ignore height, keep aspect ratio
+        fix_height  = 4,   // Set height, ignore width, keep aspect ratio
+        fit_inside  = 8,   // Fit inside width and height, keep aspect ratio
+        wrap        = 16,  // Wrap at edges
+    };
+
+    RS_DEFINE_BITMASK_OPERATORS(ImageResize)
 
     class ImageIoError:
     public std::runtime_error {
@@ -73,6 +86,12 @@ namespace RS::Graphics::Plane {
         StbiPtr<float> load_image_hdr(const IO::Path& file, Point& shape);
         void save_image_8(const Image<Core::Rgba8>& image, const IO::Path& file, const std::string& format, int quality);
         void save_image_hdr(const Image<Core::Rgbaf>& image, const IO::Path& file);
+        void resize_image_8(const uint8_t* in, Point ishape, uint8_t* out, Point oshape, int num_channels, int alpha_channel,
+            int stb_flags, int stb_edge, int stb_filter, int stb_space);
+        void resize_image_16(const uint16_t* in, Point ishape, uint16_t* out, Point oshape, int num_channels, int alpha_channel,
+            int stb_flags, int stb_edge, int stb_filter, int stb_space);
+        void resize_image_hdr(const float* in, Point ishape, float* out, Point oshape, int num_channels, int alpha_channel,
+            int stb_flags, int stb_edge, int stb_filter, int stb_space);
 
     }
 
@@ -212,6 +231,14 @@ namespace RS::Graphics::Plane {
             return result;
         }
 
+        Image resized(int n, ImageResize rflags = ImageResize::none) const { return resized(Point{n, n}, rflags); }
+        Image resized(Point new_shape, ImageResize rflags = ImageResize::none) const;
+        void resize(int n, ImageResize rflags = ImageResize::none) { resize(Point{n, n}, rflags); }
+        void resize(Point new_shape, ImageResize rflags = ImageResize::none) { auto img = resized(new_shape, rflags); *this = std::move(img); }
+        Image resampled(double scale, ImageResize rflags = ImageResize::none) const { return resampled(Core::Double2{scale, scale}, rflags); }
+        Image resampled(Core::Double2 scale, ImageResize rflags = ImageResize::none) const;
+        void resample(double scale, ImageResize rflags = ImageResize::none) { resample(Core::Double2{scale, scale}, rflags); }
+        void resample(Core::Double2 scale, ImageResize rflags = ImageResize::none) { auto img = resampled(scale, rflags); *this = std::move(img); }
         void reset(Point shape) { reset(shape.x(), shape.y()); }
         void reset(Point shape, colour_type c) { reset(shape.x(), shape.y(), c); }
 
@@ -347,6 +374,87 @@ namespace RS::Graphics::Plane {
             convert_image(*this, image);
             Detail::save_image_8(image, file, format, quality);
         }
+    }
+
+    template <typename T, typename CS, Core::ColourLayout CL, ImageFlags Flags>
+    Image<Core::Colour<T, CS, CL>, Flags>
+    Image<Core::Colour<T, CS, CL>, Flags>::resized(Point new_shape, ImageResize rflags) const {
+
+        static constexpr int stbir_flag_alpha_premultiplied  = 1;
+        static constexpr int stbir_edge_clamp                = 1;
+        static constexpr int stbir_edge_wrap                 = 3;
+        static constexpr int stbir_filter_default            = 0;
+        static constexpr int stbir_colorspace_linear         = 0;
+        static constexpr int stbir_colorspace_srgb           = 1;
+
+        using working_channel = std::conditional_t<std::is_same_v<T, uint8_t> || std::is_same_v<T, uint16_t>, T, float>;
+        using working_space = std::conditional_t<std::is_same_v<CS, Core::sRGB>, Core::sRGB, Core::LinearRGB>;
+        using working_colour = Core::Colour<working_channel, working_space, CL>;
+        using working_image = Image<working_colour, Flags>;
+
+        auto aspect_flags = rflags & (ImageResize::set_aspect | ImageResize::fix_width | ImageResize::fix_height | ImageResize::fit_inside);
+        if (TL::popcount(int(aspect_flags)) > 1)
+            throw std::invalid_argument(RS::Format::format("Invalid image resize flags: 0x{0:x}", int(rflags)));
+
+        Point actual_shape = new_shape;
+
+        auto adjusted_width = [this,new_shape] {
+            double old_w = shape_.x();
+            double old_h = shape_.y();
+            double new_h = new_shape.y();
+            return int(std::lround(new_h * old_w / old_h));
+        };
+
+        auto adjusted_height = [this,new_shape] {
+            double old_w = shape_.x();
+            double old_h = shape_.y();
+            double new_h = new_shape.y();
+            return int(std::lround(new_h * old_w / old_h));
+        };
+
+        if (!! (rflags & ImageResize::fix_width)) {
+            actual_shape.y() = adjusted_height();
+        } else if (!! (rflags & ImageResize::fix_height)) {
+            actual_shape.x() = adjusted_width();
+        } else if (!! (rflags & ImageResize::fit_inside)) {
+            int adj_w = adjusted_width();
+            int adj_h = adjusted_height();
+            actual_shape.x() = std::min(new_shape.x(), adj_w);
+            actual_shape.y() = std::min(new_shape.y(), adj_h);
+        }
+
+        int stb_flags = is_premultiplied ? stbir_flag_alpha_premultiplied : 0;
+        int stb_edge = !! (rflags & ImageResize::wrap) ? stbir_edge_wrap : stbir_edge_clamp;
+        int stb_filter = stbir_filter_default;
+        int stb_space = std::is_same_v<CS, Core::sRGB> ? stbir_colorspace_srgb : stbir_colorspace_linear;
+
+        working_image working_input;
+        convert_image(*this, working_input);
+        working_image working_output(actual_shape);
+
+        if constexpr (std::is_same_v<channel_type, uint8_t>)
+            Detail::resize_image_8(working_input.data(), shape_, working_output.data(), actual_shape,
+                working_colour::channels, working_colour::alpha_index, stb_flags, stb_edge, stb_filter, stb_space);
+        else if constexpr (std::is_same_v<channel_type, uint16_t>)
+            Detail::resize_image_16(working_input.data(), shape_, working_output.data(), actual_shape,
+                working_colour::channels, working_colour::alpha_index, stb_flags, stb_edge, stb_filter, stb_space);
+        else
+            Detail::resize_image_hdr(working_input.data(), shape_, working_output.data(), actual_shape,
+                working_colour::channels, working_colour::alpha_index, stb_flags, stb_edge, stb_filter, stb_space);
+
+        Image result;
+        convert_image(working_output, result);
+
+        return result;
+
+    }
+
+    template <typename T, typename CS, Core::ColourLayout CL, ImageFlags Flags>
+    Image<Core::Colour<T, CS, CL>, Flags>
+    Image<Core::Colour<T, CS, CL>, Flags>::resampled(Core::Double2 scale, ImageResize rflags) const {
+        int w = int(std::lround(scale.x() * width()));
+        int h = int(std::lround(scale.y() * height()));
+        return resampled(Point{w, h}, rflags);
     }
 
 }

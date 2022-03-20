@@ -34,6 +34,24 @@ Pixel data will be assumed to include premultiplied alpha if the
 `premultiplied` flag is used.
 
 ```c++
+enum class ImageResize: int {
+    none = 0,
+    set_aspect,  // Set a new aspect ratio (default)
+    fix_width,   // Set width, ignore height, keep aspect ratio
+    fix_height,  // Set height, ignore width, keep aspect ratio
+    fit_inside,  // Fit inside width and height, keep aspect ratio
+    wrap,        // Wrap at edges
+};
+```
+
+Bitmask flags controlling image resizing behaviour. The `wrap` flag treats the
+image as wrapped around in both directions when interpolating edge values.
+The other four flags determine how the image's dimensions are adjusted. By
+default, the dimensions or scale factor passed to the resizing function are
+used directly, which may change the image's aspect ratio; the other options
+keep the original aspect ratio.
+
+```c++
 class ImageIoError:
 public std::runtime_error {
     IO::Path file() const noexcept;
@@ -282,13 +300,7 @@ Queries an image file for information about the stored image. File formats
 supported are the same as for `Image::load()`. This will return a null
 `ImageInfo` if the file is not found or is not in a recognisable format.
 
-### Other member functions
-
-```c++
-void Image::clear() noexcept;
-```
-
-Resets the `Image` object to an empty image. Equivalent to `reset(0,0)`.
+### Image size and shape functions
 
 ```c++
 bool Image::empty() const noexcept;
@@ -297,22 +309,31 @@ bool Image::empty() const noexcept;
 True if the image is empty (both dimensions are zero).
 
 ```c++
-void Image::fill(Colour c) noexcept;
-```
-
-Fills all pixels with a uniform colour.
-
-```c++
 void Image::reset(Point shape);
 void Image::reset(Point shape, Colour c);
 void Image::reset(int w, int h);
 void Image::reset(int w, int h, Colour c);
 ```
 
-Changes the image shape to the specified dimensions. If a colour is supplied,
-the new image will be filled with that colour; otherwise, the pixel data is
-left uninitialized. These will throw `std::invalid_argument` if either
-dimension is negative, or if one is zero but the other is not.
+Replace the image with a new image with the specified dimensions, discarding
+the image's current contents. If a colour is supplied, the new image will be
+filled with that colour; otherwise, the pixel data is left uninitialized.
+These will throw `std::invalid_argument` if either dimension is negative, or
+if one is zero but the other is not.
+
+```c++
+void Image::resize(int n, ImageResize rflags = ImageResize::none);
+void Image::resize(Point new_shape, ImageResize rflags = ImageResize::none);
+Image Image::resized(int n, ImageResize rflags = ImageResize::none) const;
+Image Image::resized(Point new_shape, ImageResize rflags = ImageResize::none) const;
+void Image::resample(double scale, ImageResize rflags = ImageResize::none);
+void Image::resample(Double2 scale, ImageResize rflags = ImageResize::none);
+Image Image::resampled(double scale, ImageResize rflags = ImageResize::none) const;
+Image Image::resampled(Double2 scale, ImageResize rflags = ImageResize::none) const;
+```
+
+Resize the image to a new set of dimensions. These will throw
+`std::invalid_argument` if the new dimensions are invalid.
 
 ```c++
 Point Image::shape() const noexcept;
@@ -329,6 +350,20 @@ size_t Image::bytes() const noexcept;
 
 The size of the image, in pixels or bytes.
 
+### Other member functions
+
+```c++
+void Image::clear() noexcept;
+```
+
+Resets the `Image` object to an empty image. Equivalent to `reset(0,0)`.
+
+```c++
+void Image::fill(Colour c) noexcept;
+```
+
+Fills all pixels with a uniform colour.
+
 ```c++
 void Image::swap(Image& img) noexcept;
 void swap(Image& a, Image& b) noexcept;
@@ -343,5 +378,4 @@ bool operator==(const Image& a, const Image& b) noexcept;
 bool operator!=(const Image& a, const Image& b) noexcept;
 ```
 
-Comparison operators. These perform a full comparison on the pixel data of the
-images.
+These perform a full comparison on the pixel data of the images.
