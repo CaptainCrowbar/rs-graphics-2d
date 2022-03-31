@@ -1,10 +1,10 @@
 # Version Information
 
-_[Skeleton Library by Ross Smith](index.html)_
+_[2D Graphics Library by Ross Smith](index.html)_
 
 ```c++
-#include "skeleton/version.hpp"
-namespace RS::Skeleton;
+#include "rs-graphics-2d/version.hpp"
+namespace RS::Graphics::Plane;
 ```
 
 This header supplies library version information.

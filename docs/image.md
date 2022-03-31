@@ -1,4 +1,4 @@
-# Thing
+# Images
 
 _[2D Graphics Library by Ross Smith](index.html)_
 
