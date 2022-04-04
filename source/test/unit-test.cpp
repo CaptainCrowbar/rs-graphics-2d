@@ -21,7 +21,8 @@ int main(int argc, char** argv) {
     UNIT_TEST(rs_graphics_2d_image_io_save)
 
     // image-resize-test.cpp
-    UNIT_TEST(rs_graphics_2d_image_resize)
+    UNIT_TEST(rs_graphics_2d_image_resize_dimensions)
+    UNIT_TEST(rs_graphics_2d_image_resize_content)
 
     // font-test.cpp
     UNIT_TEST(rs_graphics_2d_font_loading)

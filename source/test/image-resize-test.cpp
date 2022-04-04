@@ -2,11 +2,43 @@
 #include "rs-graphics-core/colour.hpp"
 #include "rs-unit-test.hpp"
 #include "test/vector-test.hpp"
+#include <stdexcept>
 
 using namespace RS::Graphics::Core;
 using namespace RS::Graphics::Plane;
 
-void test_rs_graphics_2d_image_resize() {
+void test_rs_graphics_2d_image_resize_dimensions() {
+
+    HdrImage in, out;
+
+    TRY(in.reset({200, 100}, Rgbaf::blue()));
+
+    TRY(out = in.resized({100, 50}));                       TEST_EQUAL(out.width(), 100);  TEST_EQUAL(out.height(), 50);
+    TRY(out = in.resized({100, 0}));                        TEST_EQUAL(out.width(), 100);  TEST_EQUAL(out.height(), 50);
+    TRY(out = in.resized({100, 60}));                       TEST_EQUAL(out.width(), 100);  TEST_EQUAL(out.height(), 50);
+    TRY(out = in.resized({100, 40}));                       TEST_EQUAL(out.width(), 80);   TEST_EQUAL(out.height(), 40);
+    TRY(out = in.resized({0, 50}));                         TEST_EQUAL(out.width(), 100);  TEST_EQUAL(out.height(), 50);
+    TRY(out = in.resized({120, 50}));                       TEST_EQUAL(out.width(), 100);  TEST_EQUAL(out.height(), 50);
+    TRY(out = in.resized({80, 50}));                        TEST_EQUAL(out.width(), 80);   TEST_EQUAL(out.height(), 40);
+    TRY(out = in.resized({100, 50}, ImageResize::unlock));  TEST_EQUAL(out.width(), 100);  TEST_EQUAL(out.height(), 50);
+    TRY(out = in.resized({100, 60}, ImageResize::unlock));  TEST_EQUAL(out.width(), 100);  TEST_EQUAL(out.height(), 60);
+    TRY(out = in.resized({100, 40}, ImageResize::unlock));  TEST_EQUAL(out.width(), 100);  TEST_EQUAL(out.height(), 40);
+    TRY(out = in.resized({120, 50}, ImageResize::unlock));  TEST_EQUAL(out.width(), 120);  TEST_EQUAL(out.height(), 50);
+    TRY(out = in.resized({80, 50}, ImageResize::unlock));   TEST_EQUAL(out.width(), 80);   TEST_EQUAL(out.height(), 50);
+    TRY(out = in.resized(0.5));                             TEST_EQUAL(out.width(), 100);  TEST_EQUAL(out.height(), 50);
+    TRY(out = in.resized(2));                               TEST_EQUAL(out.width(), 400);  TEST_EQUAL(out.height(), 200);
+
+    TEST_THROW(out = in.resized({-1, 50}),                       std::invalid_argument);
+    TEST_THROW(out = in.resized({100, -1}),                      std::invalid_argument);
+    TEST_THROW(out = in.resized({0, 0}),                         std::invalid_argument);
+    TEST_THROW(out = in.resized({0, 50}, ImageResize::unlock),   std::invalid_argument);
+    TEST_THROW(out = in.resized({100, 0}, ImageResize::unlock),  std::invalid_argument);
+    TEST_THROW(out = in.resized(0),                              std::invalid_argument);
+    TEST_THROW(out = in.resized(-0.5),                           std::invalid_argument);
+
+}
+
+void test_rs_graphics_2d_image_resize_content() {
 
     Image8 in8, out8;
     Image16 in16, out16;
@@ -37,6 +69,16 @@ void test_rs_graphics_2d_image_resize() {
     TRY(out8sp = in8sp.resized({100, 50}));
     TRY(out16sp = in16sp.resized({100, 50}));
     TRY(out32sp = in32sp.resized({100, 50}));
+
+    TEST_EQUAL(out8.width(), 100);     TEST_EQUAL(out8.height(), 50);
+    TEST_EQUAL(out16.width(), 100);    TEST_EQUAL(out16.height(), 50);
+    TEST_EQUAL(out32.width(), 100);    TEST_EQUAL(out32.height(), 50);
+    TEST_EQUAL(out8s.width(), 100);    TEST_EQUAL(out8s.height(), 50);
+    TEST_EQUAL(out16s.width(), 100);   TEST_EQUAL(out16s.height(), 50);
+    TEST_EQUAL(out32s.width(), 100);   TEST_EQUAL(out32s.height(), 50);
+    TEST_EQUAL(out8sp.width(), 100);   TEST_EQUAL(out8sp.height(), 50);
+    TEST_EQUAL(out16sp.width(), 100);  TEST_EQUAL(out16sp.height(), 50);
+    TEST_EQUAL(out32sp.width(), 100);  TEST_EQUAL(out32sp.height(), 50);
 
     // TODO
 

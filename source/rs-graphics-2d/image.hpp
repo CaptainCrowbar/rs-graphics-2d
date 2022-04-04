@@ -28,19 +28,16 @@ namespace RS::Graphics::Plane {
 
     enum class ImageFlags: int {
         none           = 0,
-        bottom_up      = 1,  // Image is laid out bottom-up internally
-        premultiplied  = 2,  // Image uses premultiplied alpha
+        bottom_up      = 1,
+        premultiplied  = 2,
     };
 
     RS_DEFINE_BITMASK_OPERATORS(ImageFlags)
 
     enum class ImageResize: int {
-        none        = 0,
-        set_aspect  = 1,   // Set a new aspect ratio
-        fix_width   = 2,   // Set width, ignore height, keep aspect ratio
-        fix_height  = 4,   // Set height, ignore width, keep aspect ratio
-        fit_inside  = 8,   // Fit inside width and height, keep aspect ratio
-        wrap        = 16,  // Wrap at edges
+        none    = 0,
+        unlock  = 1,
+        wrap    = 2,
     };
 
     RS_DEFINE_BITMASK_OPERATORS(ImageResize)
@@ -231,30 +228,28 @@ namespace RS::Graphics::Plane {
             return result;
         }
 
-        Image resized(int n, ImageResize rflags = ImageResize::none) const { return resized(Point{n, n}, rflags); }
-        Image resized(Point new_shape, ImageResize rflags = ImageResize::none) const;
-        void resize(int n, ImageResize rflags = ImageResize::none) { resize(Point{n, n}, rflags); }
-        void resize(Point new_shape, ImageResize rflags = ImageResize::none) { auto img = resized(new_shape, rflags); *this = std::move(img); }
-        Image resampled(double scale, ImageResize rflags = ImageResize::none) const { return resampled(Core::Double2{scale, scale}, rflags); }
-        Image resampled(Core::Double2 scale, ImageResize rflags = ImageResize::none) const;
-        void resample(double scale, ImageResize rflags = ImageResize::none) { resample(Core::Double2{scale, scale}, rflags); }
-        void resample(Core::Double2 scale, ImageResize rflags = ImageResize::none) { auto img = resampled(scale, rflags); *this = std::move(img); }
         void reset(Point shape) { reset(shape.x(), shape.y()); }
         void reset(Point shape, colour_type c) { reset(shape.x(), shape.y(), c); }
 
         void reset(int w, int h) {
-            size_t n = check_size(w, h);
+            Point p(w, h);
+            size_t n = check_size(p);
             pixels_.resize(n);
-            shape_ = {w, h};
+            shape_ = p;
         }
 
         void reset(int w, int h, colour_type c) {
-            size_t n = check_size(w, h);
+            Point p(w, h);
+            size_t n = check_size(p);
             pixels_.clear();
             pixels_.resize(n, c);
-            shape_ = {w, h};
+            shape_ = p;
         }
 
+        void resize(Point new_shape, ImageResize rflags = ImageResize::none);
+        void resize(double scale, ImageResize rflags = ImageResize::none);
+        Image resized(Point new_shape, ImageResize rflags = ImageResize::none) const;
+        Image resized(double scale, ImageResize rflags = ImageResize::none) const;
         Point shape() const noexcept { return shape_; }
         bool empty() const noexcept { return pixels_.empty(); }
         int width() const noexcept { return shape_.x(); }
@@ -275,10 +270,10 @@ namespace RS::Graphics::Plane {
 
         int64_t make_index(int x, int y) const noexcept { return int64_t(width()) * y + x; }
 
-        static size_t check_size(int w, int h) {
-            if (w < 0 || h < 0 || (w == 0) != (h == 0))
-                throw std::invalid_argument(RS::Format::format("Invalid image dimensions: {0} x {1}", w, h));
-            return size_t(w) * size_t(h);
+        static size_t check_size(Point p) {
+            if (p.x() < 0 || p.y() < 0 || (p.x() == 0) != (p.y() == 0))
+                throw std::invalid_argument(Format::format("Invalid image dimensions: {0}", p));
+            return size_t(p.x()) * size_t(p.y());
         }
 
     };
@@ -377,6 +372,18 @@ namespace RS::Graphics::Plane {
     }
 
     template <typename T, typename CS, Core::ColourLayout CL, ImageFlags Flags>
+    void Image<Core::Colour<T, CS, CL>, Flags>::resize(Point new_shape, ImageResize rflags) {
+        auto img = resized(new_shape, rflags);
+        *this = std::move(img);
+    }
+
+    template <typename T, typename CS, Core::ColourLayout CL, ImageFlags Flags>
+    void Image<Core::Colour<T, CS, CL>, Flags>::resize(double scale, ImageResize rflags) {
+        auto img = resized(scale, rflags);
+        *this = std::move(img);
+    }
+
+    template <typename T, typename CS, Core::ColourLayout CL, ImageFlags Flags>
     Image<Core::Colour<T, CS, CL>, Flags>
     Image<Core::Colour<T, CS, CL>, Flags>::resized(Point new_shape, ImageResize rflags) const {
 
@@ -392,39 +399,43 @@ namespace RS::Graphics::Plane {
         using working_colour = Core::Colour<working_channel, working_space, CL>;
         using working_image = Image<working_colour, Flags>;
 
-        auto aspect_flags = rflags & (ImageResize::set_aspect | ImageResize::fix_width | ImageResize::fix_height | ImageResize::fit_inside);
-        if (TL::popcount(int(aspect_flags)) > 1)
-            throw std::invalid_argument(RS::Format::format("Invalid image resize flags: 0x{0:x}", int(rflags)));
+        bool use_unlock = !! (rflags & ImageResize::unlock);
+        bool use_wrap = !! (rflags & ImageResize::wrap);
+
+        auto fail = [new_shape] {
+            throw std::invalid_argument(Format::format("Invalid image dimensions: {0}", new_shape));
+        };
+
+        if (new_shape.x() < 0 || new_shape.y() < 0)
+            fail();
+        if (new_shape.x() == 0 && new_shape.y() == 0)
+            fail();
+        if ((new_shape.x() == 0 || new_shape.y() == 0) && use_unlock)
+            fail();
 
         Point actual_shape = new_shape;
 
-        auto adjusted_width = [this,new_shape] {
-            double old_w = shape_.x();
-            double old_h = shape_.y();
-            double new_h = new_shape.y();
-            return int(std::lround(new_h * old_w / old_h));
-        };
+        if (! use_unlock) {
 
-        auto adjusted_height = [this,new_shape] {
-            double old_w = shape_.x();
-            double old_h = shape_.y();
-            double new_h = new_shape.y();
-            return int(std::lround(new_h * old_w / old_h));
-        };
+            Core::Double2 rshape(new_shape.x(), new_shape.y());
+            double ratio = double(width()) / double(height());
 
-        if (!! (rflags & ImageResize::fix_width)) {
-            actual_shape.y() = adjusted_height();
-        } else if (!! (rflags & ImageResize::fix_height)) {
-            actual_shape.x() = adjusted_width();
-        } else if (!! (rflags & ImageResize::fit_inside)) {
-            int adj_w = adjusted_width();
-            int adj_h = adjusted_height();
-            actual_shape.x() = std::min(new_shape.x(), adj_w);
-            actual_shape.y() = std::min(new_shape.y(), adj_h);
+            if (new_shape.x() == 0) {
+                rshape.x() = rshape.y() * ratio;
+            } else if (new_shape.y() == 0) {
+                rshape.y() = rshape.x() / ratio;
+            } else {
+                rshape.x() = std::min(rshape.x(), rshape.y() * ratio);
+                rshape.y() = std::min(rshape.y(), rshape.x() / ratio);
+            }
+
+            actual_shape.x() = int(std::lround(rshape.x()));
+            actual_shape.y() = int(std::lround(rshape.y()));
+
         }
 
         int stb_flags = is_premultiplied ? stbir_flag_alpha_premultiplied : 0;
-        int stb_edge = !! (rflags & ImageResize::wrap) ? stbir_edge_wrap : stbir_edge_clamp;
+        int stb_edge = use_wrap ? stbir_edge_wrap : stbir_edge_clamp;
         int stb_filter = stbir_filter_default;
         int stb_space = std::is_same_v<CS, Core::sRGB> ? stbir_colorspace_srgb : stbir_colorspace_linear;
 
@@ -451,10 +462,12 @@ namespace RS::Graphics::Plane {
 
     template <typename T, typename CS, Core::ColourLayout CL, ImageFlags Flags>
     Image<Core::Colour<T, CS, CL>, Flags>
-    Image<Core::Colour<T, CS, CL>, Flags>::resampled(Core::Double2 scale, ImageResize rflags) const {
-        int w = int(std::lround(scale.x() * width()));
-        int h = int(std::lround(scale.y() * height()));
-        return resampled(Point{w, h}, rflags);
+    Image<Core::Colour<T, CS, CL>, Flags>::resized(double scale, ImageResize rflags) const {
+        if (scale <= 0)
+            throw std::invalid_argument(Format::format("Invalid image scale factor: {0}", scale));
+        int w = int(std::lround(scale * width()));
+        int h = int(std::lround(scale * height()));
+        return resized(Point{w, h}, rflags | ImageResize::unlock);
     }
 
 }

@@ -36,6 +36,16 @@ Pixel data will be assumed to include premultiplied alpha if the
 ```c++
 enum class ImageResize: int {
     none = 0,
+    unlock,
+    wrap,
+}
+```
+
+Bitmask flags controlling the behaviour of the `resize()` function.
+
+```c++
+enum class ImageResize: int {
+    none = 0,
     set_aspect,  // Set a new aspect ratio (default)
     fix_width,   // Set width, ignore height, keep aspect ratio
     fix_height,  // Set height, ignore width, keep aspect ratio
@@ -322,18 +332,34 @@ These will throw `std::invalid_argument` if either dimension is negative, or
 if one is zero but the other is not.
 
 ```c++
-void Image::resize(int n, ImageResize rflags = ImageResize::none);
 void Image::resize(Point new_shape, ImageResize rflags = ImageResize::none);
-Image Image::resized(int n, ImageResize rflags = ImageResize::none) const;
+void Image::resize(double scale, ImageResize rflags = ImageResize::none);
 Image Image::resized(Point new_shape, ImageResize rflags = ImageResize::none) const;
-void Image::resample(double scale, ImageResize rflags = ImageResize::none);
-void Image::resample(Double2 scale, ImageResize rflags = ImageResize::none);
-Image Image::resampled(double scale, ImageResize rflags = ImageResize::none) const;
-Image Image::resampled(Double2 scale, ImageResize rflags = ImageResize::none) const;
+Image Image::resized(double scale, ImageResize rflags = ImageResize::none) const;
 ```
 
-Resize the image to a new set of dimensions. These will throw
-`std::invalid_argument` if the new dimensions are invalid.
+Resample the image to a new set of dimensions. The `resize()` functions modify
+the image in place; the `resized()` functions return a new image. The first
+version of each function accepts a new width and height in pixels; the second
+version accepts a floating point scale factor(the new dimensions will be
+rounded to the nearest integer).
+
+In the absence of the `unlock` flag, either of the `new_shape` dimensions
+(but not both) can be zero; the zero dimension will be scaled in proportion
+to the other dimension (rounded to the nearest integer). If both dimensions
+are set, the default behaviour is to scale the image to the largest size that
+will fit within the given dimensions. If the `unlock` flag is set, both of
+the `new_shape` dimensions are taken literally, which may change the aspect
+ratio of the image. The `unlock` flag has no effect on the `scale` based
+functions.
+
+The `wrap` flag treats the image as wrapped around in both directions when
+interpolating edge values.
+
+The `new_shape` based functions will throw `std::invalid_argument` if both
+dimensions are zero or either dimension is negative, or if either dimension
+is zero when the `unlock` flag is used. The `scale` based functions will
+throw `std::invalid_argument` if the scale is zero or negative.
 
 ```c++
 Point Image::shape() const noexcept;
