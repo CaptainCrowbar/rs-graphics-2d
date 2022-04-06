@@ -112,7 +112,7 @@ namespace RS::Graphics::Plane {
             basic_iterator(const basic_iterator<std::remove_const_t<CI>, std::remove_const_t<CC>>& i):
                 image_(i.image_), index_(i.index_) {}
 
-            CC& operator*() const noexcept { return image_->pixels_[index_]; }
+            CC& operator*() const noexcept { return image_->pix_.get()[index_]; }
             CC* operator->() const noexcept { return &**this; }
             basic_iterator& operator++() noexcept { ++index_; return *this; }
             basic_iterator operator++(int) noexcept { auto i = *this; ++*this; return i; }
@@ -168,11 +168,17 @@ namespace RS::Graphics::Plane {
 
         static_assert(colour_type::can_premultiply || ! is_premultiplied);
 
-        Image() noexcept: pixels_(), shape_(0, 0) {}
+        Image() noexcept: pix_(), shape_(0, 0) {}
         explicit Image(Point shape) { reset(shape); }
         Image(Point shape, colour_type c) { reset(shape, c); }
         Image(int w, int h) { reset(w, h); }
         Image(int w, int h, colour_type c) { reset(w, h, c); }
+
+        ~Image() noexcept = default;
+        Image(const Image& img) { reset(img.shape()); std::memcpy(data(), img.data(), bytes()); }
+        Image(Image&& img) noexcept: pix_(std::move(img.pix_)), shape_(img.shape_) { img.shape_ = {0, 0}; }
+        Image& operator=(const Image& img) { Image copy(img); swap(copy); return *this; }
+        Image& operator=(Image&& img) noexcept { Image copy(std::move(img)); swap(copy); return *this; }
 
         colour_type& operator[](Point p) noexcept { return (*this)(p.x(), p.y()); }
         const colour_type& operator[](Point p) const noexcept { return (*this)(p.x(), p.y()); }
@@ -183,8 +189,8 @@ namespace RS::Graphics::Plane {
         const_iterator begin() const noexcept { return const_iterator(*this, 0); }
         iterator end() noexcept { return iterator(*this, int64_t(size())); }
         const_iterator end() const noexcept { return const_iterator(*this, int64_t(size())); }
-        T* data() noexcept { return reinterpret_cast<T*>(pixels_.data()); }
-        const T* data() const noexcept { return reinterpret_cast<const T*>(pixels_.data()); }
+        T* data() noexcept { return reinterpret_cast<T*>(pix_.get()); }
+        const T* data() const noexcept { return reinterpret_cast<const T*>(pix_.get()); }
 
         iterator bottom_left() noexcept { return locate(0, is_top_down ? height() - 1 : 0); }
         const_iterator bottom_left() const noexcept { return locate(0, is_top_down ? height() - 1 : 0); }
@@ -195,8 +201,8 @@ namespace RS::Graphics::Plane {
         iterator top_right() noexcept { return locate(width() - 1, is_top_down ? 0 : height() - 1); }
         const_iterator top_right() const noexcept { return locate(width() - 1, is_top_down ? 0 : height() - 1); }
 
-        void clear() noexcept { pixels_.clear(); shape_ = {}; }
-        void fill(colour_type c) noexcept { std::fill(pixels_.begin(), pixels_.end(), c); }
+        void clear() noexcept { pix_.reset(); shape_ = {0, 0}; }
+        void fill(colour_type c) noexcept { std::fill(begin(), end(), c); }
 
         void load(const IO::Path& file);
         void save(const IO::Path& file, int quality = 90) const;
@@ -206,75 +212,41 @@ namespace RS::Graphics::Plane {
         iterator locate(int x, int y) noexcept { return iterator(*this, make_index(x, y)); }
         const_iterator locate(int x, int y) const noexcept { return const_iterator(*this, make_index(x, y)); }
 
-        template <typename U = T>
-        Image<colour_type, Flags | ImageFlags::premultiplied>
-        multiply_alpha(std::enable_if<TL::SfinaeTrue<U, colour_type::can_premultiply
-                && ! is_premultiplied>::value>* = nullptr) const {
-            Image<colour_type, Flags | ImageFlags::premultiplied> result(shape());
-            auto out = result.begin();
-            for (auto& pixel: *this)
-                *out++ = pixel.multiply_alpha();
-            return result;
-        }
+        template <typename U = T> Image<colour_type, Flags | ImageFlags::premultiplied>
+            multiply_alpha(std::enable_if<TL::SfinaeTrue<U, colour_type::can_premultiply && ! is_premultiplied>::value>* = nullptr) const;
+        template <typename U = T> Image<colour_type, Flags & ~ ImageFlags::premultiplied>
+            unmultiply_alpha(std::enable_if<TL::SfinaeTrue<U, colour_type::can_premultiply && is_premultiplied>::value>* = nullptr) const;
 
-        template <typename U = T>
-        Image<colour_type, Flags & ~ ImageFlags::premultiplied>
-        unmultiply_alpha(std::enable_if<TL::SfinaeTrue<U, colour_type::can_premultiply
-                && is_premultiplied>::value>* = nullptr) const {
-            Image<colour_type, Flags & ~ ImageFlags::premultiplied> result(shape());
-            auto out = result.begin();
-            for (auto& pixel: *this)
-                *out++ = pixel.unmultiply_alpha();
-            return result;
-        }
-
-        void reset(Point shape) { reset(shape.x(), shape.y()); }
-        void reset(Point shape, colour_type c) { reset(shape.x(), shape.y(), c); }
-
-        void reset(int w, int h) {
-            Point p(w, h);
-            size_t n = check_size(p);
-            pixels_.resize(n);
-            shape_ = p;
-        }
-
-        void reset(int w, int h, colour_type c) {
-            Point p(w, h);
-            size_t n = check_size(p);
-            pixels_.clear();
-            pixels_.resize(n, c);
-            shape_ = p;
-        }
-
+        void reset(Point new_shape);
+        void reset(Point new_shape, colour_type c) { reset(new_shape); fill(c); }
+        void reset(int w, int h) { reset(Point(w, h)); }
+        void reset(int w, int h, colour_type c) { reset(Point(w, h), c); }
         void resize(Point new_shape, ImageResize rflags = ImageResize::none);
         void resize(double scale, ImageResize rflags = ImageResize::none);
         Image resized(Point new_shape, ImageResize rflags = ImageResize::none) const;
         Image resized(double scale, ImageResize rflags = ImageResize::none) const;
         Point shape() const noexcept { return shape_; }
-        bool empty() const noexcept { return pixels_.empty(); }
+        bool empty() const noexcept { return ! pix_; }
         int width() const noexcept { return shape_.x(); }
         int height() const noexcept { return shape_.y(); }
         size_t size() const noexcept { return size_t(width()) * size_t(height()); }
         size_t bytes() const noexcept { return size() * sizeof(colour_type); }
 
-        void swap(Image& img) noexcept { pixels_.swap(img.pixels_); std::swap(shape_, img.shape_); }
+        void swap(Image& img) noexcept { std::swap(pix_, img.pix_); std::swap(shape_, img.shape_); }
         friend void swap(Image& a, Image& b) noexcept { a.swap(b); }
 
-        friend bool operator==(const Image& a, const Image& b) noexcept { return a.shape_ == b.shape_ && a.pixels_ == b.pixels_; }
+        friend bool operator==(const Image& a, const Image& b) noexcept {
+            return a.shape_ == b.shape_ && std::memcmp(a.pix_.get(), b.pix_.get(), a.bytes()) == 0;
+        }
+
         friend bool operator!=(const Image& a, const Image& b) noexcept { return ! (a == b); }
 
     private:
 
-        std::vector<colour_type> pixels_;
+        std::unique_ptr<colour_type, TL::FreeMem> pix_;
         Point shape_;
 
         int64_t make_index(int x, int y) const noexcept { return int64_t(width()) * y + x; }
-
-        static size_t check_size(Point p) {
-            if (p.x() < 0 || p.y() < 0 || (p.x() == 0) != (p.y() == 0))
-                throw std::invalid_argument(Format::format("Invalid image dimensions: {0}", p));
-            return size_t(p.x()) * size_t(p.y());
-        }
 
     };
 
@@ -368,6 +340,46 @@ namespace RS::Graphics::Plane {
             Image<Core::Rgba8> image;
             convert_image(*this, image);
             Detail::save_image_8(image, file, format, quality);
+        }
+    }
+
+    template <typename T, typename CS, Core::ColourLayout CL, ImageFlags Flags>
+    template <typename U>
+    Image<Core::Colour<T, CS, CL>, Flags | ImageFlags::premultiplied>
+    Image<Core::Colour<T, CS, CL>, Flags>::multiply_alpha(std::enable_if<TL::SfinaeTrue<U, colour_type::can_premultiply
+            && ! is_premultiplied>::value>*) const {
+        Image<colour_type, Flags | ImageFlags::premultiplied> result(shape());
+        auto out = result.begin();
+        for (auto& pixel: *this)
+            *out++ = pixel.multiply_alpha();
+        return result;
+    }
+
+    template <typename T, typename CS, Core::ColourLayout CL, ImageFlags Flags>
+    template <typename U>
+    Image<Core::Colour<T, CS, CL>, Flags & ~ ImageFlags::premultiplied>
+    Image<Core::Colour<T, CS, CL>, Flags>::unmultiply_alpha(std::enable_if<TL::SfinaeTrue<U, colour_type::can_premultiply
+            && is_premultiplied>::value>*) const {
+        Image<colour_type, Flags & ~ ImageFlags::premultiplied> result(shape());
+        auto out = result.begin();
+        for (auto& pixel: *this)
+            *out++ = pixel.unmultiply_alpha();
+        return result;
+    }
+
+    template <typename T, typename CS, Core::ColourLayout CL, ImageFlags Flags>
+    void Image<Core::Colour<T, CS, CL>, Flags>::reset(Point new_shape) {
+        if (new_shape == Point(0, 0)) {
+            clear();
+        } else if (new_shape.x() <= 0 || new_shape.y() <= 0) {
+            throw std::invalid_argument(Format::format("Invalid image dimensions: {0}", new_shape));
+        } else {
+            size_t n_bytes = size_t(new_shape.x()) * size_t(new_shape.y()) * sizeof(colour_type);
+            auto ptr = std::malloc(n_bytes);
+            if (ptr == nullptr)
+                throw std::bad_alloc();
+            pix_.reset(static_cast<colour_type*>(ptr));
+            shape_ = new_shape;
         }
     }
 

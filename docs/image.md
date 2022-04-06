@@ -319,8 +319,8 @@ bool Image::empty() const noexcept;
 True if the image is empty (both dimensions are zero).
 
 ```c++
-void Image::reset(Point shape);
-void Image::reset(Point shape, Colour c);
+void Image::reset(Point new_shape);
+void Image::reset(Point new_shape, Colour c);
 void Image::reset(int w, int h);
 void Image::reset(int w, int h, Colour c);
 ```
