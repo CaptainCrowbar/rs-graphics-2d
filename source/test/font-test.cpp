@@ -365,17 +365,11 @@ void test_rs_graphics_2d_font_map() {
     TRY(families = map.families());
     TEST_EQUAL(families.size(), map.size());
 
-    TRY(font = map.find({"Helvetica", "Arial"}));
+    TRY(font = map.find({"Helvetica", "Arial", "DejaVu Sans"}));
     TEST(font);
-    TEST_MATCH(font.name(), "^(Helvetica|Arial)$");
-    TRY(font = map.find({"Helvetica", "Arial"}, FontStyle::bold));
+    TEST_MATCH(font.name(), "^(Helvetica|Arial|DejaVu Sans)$");
+    TRY(font = map.find({"Helvetica", "Arial", "DejaVu Sans"}, FontStyle::bold));
     TEST(font);
-    TEST_MATCH(font.name(), "^(Helvetica|Arial) Bold$");
-    TRY(font = map.find({"Helvetica", "Arial"}, FontStyle::italic));
-    TEST(font);
-    TEST_MATCH(font.name(), "^(Helvetica|Arial) (Italic|Oblique)$");
-    TRY(font = map.find({"Helvetica", "Arial"}, FontStyle::bold | FontStyle::italic));
-    TEST(font);
-    TEST_MATCH(font.name(), "^(Helvetica|Arial) Bold (Italic|Oblique)$");
+    TEST_MATCH(font.name(), "^(Helvetica|Arial|DejaVu Sans) Bold$");
 
 }
